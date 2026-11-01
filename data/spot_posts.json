@@ -570,6 +570,21 @@
   "nand_ctx": "512Gb TLC wafers fell 1.00% this week to US$19.883."
  },
  {
+  "url": "https://www.trendforce.com/news/2026/09/30/insights-memory-spot-price-update-dram-market-quiet-amid-holidays-nand-buying-stays-weak/",
+  "article_date": "2026-09-30",
+  "ddr4_date": "2026-09-29",
+  "nand_date": "2026-09-28",
+  "obs_date": "2026-09-29",
+  "ddr4_mainstream_usd": 46.32,
+  "nand512_tlc_usd": 19.396,
+  "ddr4_pct_change": 0.93,
+  "nand_pct_change": 2.45,
+  "title": "[Insights] Memory Spot Price Update: DRAM Market Quiet Amid Holidays; NAND Buying Stays Weak",
+  "err": null,
+  "ddr4_ctx": "mainstream chips (i.e., DDR4 1Gx8 3200MT/s) has increased by 0.93% from US$45.89 last week (September 23) to US$46.32 this week (September 29).",
+  "nand_ctx": "512Gb TLC wafers fell 2.45% this week (September 28), reaching an average quotation of US$19.396."
+ },
+ {
   "url": "https://www.trendforce.com/news/2026/10/07/insights-memory-spot-price-update-dram-spot-largely-sideways-as-holidays-month-end-effects-weigh/",
   "article_date": "2026-10-07",
   "ddr4_date": null,
