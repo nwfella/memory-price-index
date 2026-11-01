@@ -6,7 +6,7 @@ A single-file dashboard tracking the 2025–2026 memory supercycle from four ang
 point traceable to a dated public source. No build step, no dependencies, no runtime fetches — the data
 is baked into the page.
 
-![status](https://img.shields.io/badge/data%20through-2026--10--31-f5b845)
+![status](https://img.shields.io/badge/data%20through-2026--11--01-f5b845)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ## What it tracks
@@ -19,7 +19,7 @@ is baked into the page.
 | 512Gb TLC NAND wafer (spot) | $/wafer | weekly | [TrendForce wafer spot](https://www.trendforce.com/price/flash/wafer_spot) |
 | Client SSD OEM contract | $/drive | quarterly | TrendForce PC-client OEM SSD contract price |
 
-## The read (31 Oct 2026)
+## The read (1 Nov 2026)
 
 - **NAND has turned.** 512Gb TLC wafers peaked at **$23.00** on 18 Mar 2026, held $19–21 for five months,
   then broke: **−26.6% off peak**, −15.1% in 30 days, −9.19% in the week to 26 Oct. Wafer contract prices
@@ -61,7 +61,7 @@ whole list is re-parsed each run.
 ```
 data/
   ramradar.csv          raw daily retail index (as downloaded)
-  spot_urls.txt         the 41 TrendForce posts feeding the spot series
+  spot_urls.txt         the 42 TrendForce posts feeding the spot series (auto-extended on refresh)
   spot_series.csv       parsed weekly quotes (one row per post, with URL)
   fetch_spot_quotes.py  parser for the weekly posts
   build_dataset.py      joins everything, computes stats + marks
