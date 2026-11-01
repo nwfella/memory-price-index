@@ -3,3 +3,5 @@ __pycache__/
 data/probe*.html
 *.png
 .DS_Store
+live_check.html
+data/live_check.html
