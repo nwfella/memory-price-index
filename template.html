@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memwatch — DRAM, NAND &amp; SSD price history</title>
+<meta name="description" content="Daily and weekly price history for DDR5/DDR4 memory, DRAM chips, NAND wafers and client SSDs. Every point sourced.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📉</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#12161d; --panel2:#171c25; --line:#232a36;
+    --fg:#e8edf5; --muted:#8b97a8; --dim:#5d6878;
+    --up:#ff5f56; --down:#31d68a; --accent:#f5b845; --d5:#6ea8fe; --d4:#a78bfa;
+    --spot:#f5b845; --nand:#31d68a;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 520px at 12% -8%, rgba(110,168,254,.09), transparent 60%),
+      radial-gradient(900px 460px at 88% 2%, rgba(49,214,138,.07), transparent 62%),
+      var(--bg);
+    color:var(--fg);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 72px}
+  a{color:var(--d5);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);
+    background:rgba(10,13,18,.82);border-bottom:1px solid var(--line);
+  }
+  .topbar .row{max-width:1180px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.14em;font-size:13px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--down);box-shadow:0 0 12px var(--down)}
+  .brand span.sub{color:var(--dim);font-weight:500;letter-spacing:.06em;text-transform:none}
+  .topbar .spacer{flex:1}
+  .stamp{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+  .topbar a.btn{font-size:12px;color:var(--fg);border:1px solid var(--line);padding:5px 11px;border-radius:999px;background:var(--panel)}
+  .topbar a.btn:hover{border-color:var(--accent);text-decoration:none}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:44px 0 26px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin:0 0 14px}
+  h1{font-size:clamp(28px,4.6vw,46px);line-height:1.1;margin:0 0 16px;letter-spacing:-.02em;font-weight:750}
+  h1 em{font-style:normal;color:var(--up)}
+  h1 b{font-weight:750;color:var(--down)}
+  .lede{color:var(--muted);max-width:70ch;font-size:15.5px;margin:0}
+  .lede strong{color:var(--fg);font-weight:600}
+
+  /* ---------- tiles ---------- */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:12px;margin:30px 0 8px}
+  .tile{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:14px 15px 10px;position:relative;overflow:hidden}
+  .tile:before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--tint,var(--line))}
+  .tile .t-name{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tile .t-val{font-family:var(--mono);font-size:27px;font-weight:600;letter-spacing:-.02em;margin:7px 0 1px}
+  .tile .t-unit{font-size:12px;color:var(--dim);font-family:var(--mono);margin-left:3px}
+  .tile .t-meta{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;margin-top:3px}
+  .tile canvas{display:block;width:100%;height:34px;margin-top:9px;opacity:.95}
+  .tile .t-note{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.4}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+  .pill{font-family:var(--mono);font-size:10.5px;padding:1.5px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);letter-spacing:.04em}
+  .pill.good{border-color:rgba(49,214,138,.45);color:var(--down);background:rgba(49,214,138,.08)}
+  .pill.bad{border-color:rgba(255,95,86,.4);color:var(--up);background:rgba(255,95,86,.07)}
+
+  /* ---------- panels ---------- */
+  section.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:22px}
+  .panel-head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .panel-head h2{font-size:16.5px;margin:0;letter-spacing:-.01em}
+  .panel-head p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:74ch}
+  .panel-head .spacer{flex:1}
+
+  /* controls */
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 4px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+  .seg button{background:none;border:0;color:var(--muted);font:600 12px system-ui;padding:6px 11px;cursor:pointer;letter-spacing:.03em}
+  .seg button:hover{color:var(--fg)}
+  .seg button.on{background:rgba(245,184,69,.16);color:var(--accent)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel2);
+        border-radius:999px;padding:5px 12px 5px 9px;cursor:pointer;font:600 12px system-ui;color:var(--muted);user-select:none}
+  .chip .sw{width:9px;height:9px;border-radius:3px;background:var(--c);opacity:.35}
+  .chip.on{color:var(--fg);border-color:rgba(255,255,255,.16)}
+  .chip.on .sw{opacity:1}
+  .chip:hover{border-color:rgba(255,255,255,.22)}
+
+  .chartbox{position:relative;margin-top:10px}
+  canvas.chart{display:block;width:100%;height:clamp(280px,42vh,420px);cursor:crosshair;touch-action:pan-y}
+  .tip{
+    position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;background:rgba(9,12,17,.96);
+    border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:var(--mono);font-size:11.5px;
+    line-height:1.6;min-width:172px;z-index:5;box-shadow:0 10px 30px rgba(0,0,0,.5)
+  }
+  .tip .tt-date{color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
+  .tip .tt-row{display:flex;justify-content:space-between;gap:14px}
+  .tip .tt-row b{font-weight:600}
+  .tip .sw{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:6px}
+
+  .legend-note{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
+
+  /* ---------- tables ---------- */
+  .tablewrap{overflow-x:auto;margin-top:14px;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}
+  th,td{text-align:right;padding:7px 10px;border-bottom:1px solid rgba(35,42,54,.7);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600;
+     position:sticky;top:0;background:var(--panel)}
+  td.num{font-family:var(--mono)}
+  tbody tr:hover{background:rgba(255,255,255,.025)}
+
+  /* ---------- ssd ladder ---------- */
+  .ladder{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:15px}
+  .card h3{margin:0 0 3px;font-size:13px;letter-spacing:.02em}
+  .card .sub{color:var(--dim);font-size:11.5px;font-family:var(--mono)}
+  .bar{height:9px;border-radius:6px;background:var(--panel);overflow:hidden;margin:10px 0 6px;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--up),var(--accent))}
+  .q2{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px}
+
+  /* ---------- verdict grid ---------- */
+  .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px}
+  .vcard{border-radius:13px;padding:15px 16px;border:1px solid var(--line);background:var(--panel2)}
+  .vcard h3{margin:0 0 7px;font-size:13px;display:flex;align-items:center;gap:8px}
+  .vcard p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .vcard.turned{border-left:3px solid var(--down)}
+  .vcard.stuck{border-left:3px solid var(--up)}
+  .vcard.mixed{border-left:3px solid var(--accent)}
+
+  footer{margin-top:34px;color:var(--dim);font-size:12px;line-height:1.7}
+  footer h4{color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px}
+  footer ol{margin:0 0 18px;padding-left:18px}
+  footer li{margin-bottom:6px}
+  .disclaimer{border-top:1px solid var(--line);padding-top:14px;margin-top:8px;max-width:88ch}
+  @media (max-width:640px){
+    .wrap{padding:0 14px 56px}
+    section.panel{padding:15px;border-radius:13px}
+    .tile .t-val{font-size:23px}
+    th,td{padding:6px 8px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="row">
+    <div class="brand"><span class="dot"></span>MEMWATCH <span class="sub">/ memory &amp; storage price history</span></div>
+    <div class="spacer"></div>
+    <div class="stamp" id="stamp">loading…</div>
+    <a class="btn" href="#sources">Sources</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="kicker">DDR5 · DDR4 · DRAM spot · NAND wafer · client SSD</p>
+    <h1 id="verdict">NAND has turned. <em>DRAM has not.</em></h1>
+    <p class="lede" id="lede"></p>
+
+    <div class="tiles" id="tiles"></div>
+  </header>
+
+  <!-- ================= main chart ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>The divergence</h2>
+        <p>Four markets, one chart. Index mode rebases every series to 100 at the start of the selected
+           window so a chip sold by the wafer and a kit sold by the gigabyte can be compared honestly.</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="controls" style="margin:0">
+        <div class="seg" id="range">
+          <button data-r="90">3M</button>
+          <button data-r="180">6M</button>
+          <button data-r="365" class="on">1Y</button>
+          <button data-r="0">All</button>
+        </div>
+        <div class="seg" id="mode">
+          <button data-m="idx" class="on">Index</button>
+          <button data-m="abs">$ actual</button>
+        </div>
+      </div>
+    </div>
+    <div class="controls chips" id="chips"></div>
+    <div class="chartbox">
+      <canvas class="chart" id="mainChart" aria-label="Price history chart"></canvas>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="legend-note" id="mainNote"></div>
+  </section>
+
+  <!-- ================= drawdown ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>How far below the peak?</h2>
+        <p>Percent below each series' own all-time high in this dataset. Zero means today is the record.
+           Negative is the only honest definition of “prices are coming down”.</p>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas class="chart" id="ddChart" style="height:clamp(220px,32vh,320px)" aria-label="Drawdown chart"></canvas>
+      <div class="tip" id="tip2"></div>
+    </div>
+    <div class="vgrid">
+      <div class="vcard turned">
+        <h3><span style="color:var(--down)">▼</span> NAND flash — turned</h3>
+        <p id="vNand"></p>
+      </div>
+      <div class="vcard stuck">
+        <h3><span style="color:var(--up)">▲</span> DRAM — still climbing</h3>
+        <p id="vDram"></p>
+      </div>
+      <div class="vcard mixed">
+        <h3><span style="color:var(--accent)">◆</span> Retail &amp; SSD — lagging</h3>
+        <p id="vRetail"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SSD contract ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Client SSD contract ladder</h2>
+        <p>What PC makers pay per drive, OEM contract grade — the layer between NAND wafer prices and the
+           retail shelf. TrendForce's 3Q26 print, published 2026-08-05.</p>
+      </div>
+    </div>
+    <div class="ladder" id="ladder"></div>
+    <div class="legend-note">
+      <span>3Q25 256GB ≈ $33.30 → 3Q26: $128.38 (TrendForce value-grade table) / $134.20 (press, DRAMeXchange) ·
+        <strong style="color:var(--up)">+285% to +303% YoY</strong> depending on grade</span>
+      <span>4Q26 outlook: NAND contract +15–20% QoQ, client SSD “limited increase” (TrendForce, 30 Sep 2026)</span>
+    </div>
+  </section>
+
+  <!-- ================= spot board ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Spot board</h2>
+        <p>The latest dated quote for each benchmark part. Session change is the vendor's own day-on-day move.</p>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="spotTbl">
+        <thead><tr><th>Benchmark</th><th>Quote</th><th>Session</th><th>As of</th><th>Source</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= monthly ledger ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Monthly ledger</h2>
+        <p>Month-end readings pulled from the same series the charts use. Retail columns are $/GB; spot columns are $/part.</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="seg" id="ledgerMode" style="margin:0">
+        <button data-l="6">6M</button>
+        <button data-l="12" class="on">12M</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="monTbl">
+        <thead><tr><th>Month</th><th>DDR5 $/GB</th><th>Δ</th><th>DDR4 $/GB</th><th>Δ</th>
+                   <th>DDR4 chip $</th><th>512Gb TLC $</th><th>Δ NAND</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer id="sources">
+    <h4>Sources</h4>
+    <ol>
+      <li><a href="https://ramradar.app/ram-price-index" target="_blank" rel="noopener">RamRadar RAM Price Index</a>
+          — daily $/GB for DDR4/DDR5 desktop and SO-DIMM kits, derived from live eBay/Newegg (and B&amp;H until Sep 2026) listings.
+          Full daily series, {{RAM_DAYS}} days, {{RAM_KITS}} tracked DDR5 kits on the last day.</li>
+      <li><a href="https://www.trendforce.com/price/dram/dram_spot" target="_blank" rel="noopener">TrendForce DRAM spot</a>
+          and <a href="https://www.trendforce.com/price/flash/wafer_spot" target="_blank" rel="noopener">NAND wafer spot</a>
+          price boards — current session quotes.</li>
+      <li><a href="https://www.trendforce.com/news/" target="_blank" rel="noopener">TrendForce “Memory Spot Price Update”</a>
+          — the weekly posts those boards summarise; each charted spot point is one of these quotes
+          ({{SPOT_POSTS}} posts parsed, links in the hover tooltip).</li>
+      <li><a href="https://www.trendforce.com/price/flash/pcc_oem_ssd_contract" target="_blank" rel="noopener">TrendForce PC-Client OEM SSD contract price</a>, 3Q26.</li>
+      <li><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html" target="_blank" rel="noopener">TrendForce 4Q26 memory outlook</a> (30 Sep 2026) — conventional DRAM +10–15% QoQ, NAND +15–20%.</li>
+    </ol>
+    <h4>Method &amp; limits</h4>
+    <p class="disclaimer">
+      <strong>Retail series are asking prices, not transactions.</strong> RamRadar records the lowest live listing per
+      kit, normalised to $/GB; eBay listings are filtered to new condition, Newegg/B&amp;H are taken as listed. Coverage is
+      uneven — eBay dominates the basket, and kit counts ship with every point (fewer than ~20 kits early in the window).
+      <br><br>
+      <strong>Spot and contract are different markets.</strong> Spot is a small, volatile, broker-driven market for loose
+      chips; contract is what OEMs pay under quarterly agreements. Spot moves first and overshoots; retail sits downstream of
+      both and lags by weeks to months. A falling 512Gb TLC wafer quote is a leading signal for SSD pricing, not a promise
+      that a specific drive got cheaper today.
+      <br><br>
+      <strong>Annotated steps are composition, not negotiation.</strong> The vertical marker in May 2026 on the retail
+      lines is a listing-mix change in the upstream index — the cheapest tracked DDR5 kit jumped from $3.17 to $6.77/GB as
+      cheap listings aged out, not a 26% overnight price cut. Days with fewer than 10 tracked kits are excluded entirely.
+      <br><br>
+      <strong>Gaps are real.</strong> TrendForce does not publish every benchmark every week, and several weekly posts carry
+      only one of the two figures — chart lines connect the observations that exist and never interpolate a missing week.
+      Data is baked into this page at build time ({{BUILT}}); nothing is fetched from your browser.
+      <br><br>
+      Not investment advice, and not a purchase recommendation. Verify any number against the linked source before acting
+      on it — that is the entire point of linking it.
+    </p>
+  </footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/{};
+
+/* ---------------- helpers ---------------- */
+const $ = (s, r = document) => r.querySelector(s);
+const fmt = (v, d = 2) => v == null ? "—" : v.toFixed(d);
+const pct = v => (v == null) ? "—" : (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+const cls = v => (v == null || Math.abs(v) < 0.05) ? "flat" : (v > 0 ? "up" : "down");
+const dayMs = 86400000;
+const toT = s => Date.parse(s + "T00:00:00Z");
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtDay = t => { const d = new Date(t); return d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear(); };
+const fmtMon = t => { const d = new Date(t); return MONTHS[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2); };
+
+const SERIES_COLORS = { ddr5_retail: "#6ea8fe", ddr4_retail: "#a78bfa", dram_spot: "#f5b845", nand_spot: "#31d68a" };
+const ORDER = ["ddr5_retail", "ddr4_retail", "dram_spot", "nand_spot"];
+const state = { range: 365, mode: "idx", on: { ddr5_retail: true, ddr4_retail: true, dram_spot: true, nand_spot: true }, ledger: 12 };
+
+/* prepare: attach timestamps once */
+for (const k of ORDER) {
+  const s = DATA.series[k];
+  s.t = s.pts.map(p => toT(p[0]));
+  s.v = s.pts.map(p => p[1]);
+  s.st = DATA.stats[k];
+}
+
+/* ---------------- header ---------------- */
+$("#stamp").textContent = "data through " + fmtDay(toT(DATA.as_of)) + " · built " + DATA.generated_at.slice(0, 10);
+const s5 = DATA.series.ddr5_retail.st, sn = DATA.series.nand_spot.st, sd = DATA.series.dram_spot.st;
+
+$("#lede").innerHTML =
+  "NAND flash broke a 21-month climb in October: 512Gb TLC wafers peaked at <strong>$" + fmt(sn.peak, 2) +
+  "</strong> on " + fmtDay(toT(sn.peak_date)) + " and now quote <strong>$" + fmt(sn.last, 2) +
+  "</strong>, <strong class='down'>" + pct(sn.off_peak_pct) + "</strong> off that high and falling " +
+  pct(sn.chg_30d) + " in the last month. DRAM has not followed: the DDR4 benchmark chip is at a record <strong>$" +
+  fmt(sd.last, 2) + "</strong>, DDR5 kits still average <strong>$" + fmt(s5.last, 2) + "/GB</strong> (" +
+  pct(s5.since_first_pct) + " since this series began), and TrendForce still guides DRAM contract prices " +
+  "+10–15% for 4Q26. Retail is showing the first cracks — DDR5 is " + pct(s5.off_peak_pct) + " from its 23 Oct record — " +
+  "but a crack is not a trend.";
+
+/* ---------------- tiles ---------------- */
+const TILES = [
+  { key: "ddr5_retail", name: "DDR5 retail", tint: "--d5", unit: "/GB", note: "" },
+  { key: "dram_spot", name: "DDR4 8Gb chip", tint: "--accent", unit: "/chip", note: "benchmark spot, weekly" },
+  { key: "nand_spot", name: "512Gb TLC wafer", tint: "--nand", unit: "/wafer", note: "NAND spot, weekly" },
+  { key: "ddr4_retail", name: "DDR4 retail", tint: "--d4", unit: "/GB", note: "desktop DIMM kits" }
+];
+
+const tilesEl = $("#tiles");
+TILES.forEach(tl => {
+  const s = DATA.series[tl.key], st = s.st;
+  const el = document.createElement("div");
+  el.className = "tile";
+  el.style.setProperty("--tint", "var(" + tl.tint + ")");
+  const tag = st.off_peak_pct < -1
+    ? '<span class="pill good">' + pct(st.off_peak_pct) + " off peak</span>"
+    : (st.off_peak_pct > -0.6 && st.since_first_pct > 5 ? '<span class="pill bad">at record</span>' : '<span class="pill">near peak</span>');
+  el.innerHTML =
+    '<div class="t-name">' + tl.name + '</div>' +
+    '<div class="t-val">$' + fmt(st.last, st.last < 30 ? 2 : 2) +
+      '<span class="t-unit">' + tl.unit + '</span></div>' +
+    '<div class="t-meta"><span class="' + cls(st.chg_30d) + '">' + pct(st.chg_30d) + ' 30d</span>' + tag + '</div>' +
+    '<canvas data-k="' + tl.key + '"></canvas>' +
+    '<div class="t-note">' + (tl.key === "ddr5_retail" ? "average across " + (DATA.series.ddr5_retail.kits.at(-1)[1]) + " tracked kits"
+      : tl.key === "ddr4_retail" ? "average across " + (DATA.series.ddr4_retail.kits.at(-1)[1]) + " tracked kits"
+      : tl.note) + '</div>';
+  tilesEl.appendChild(el);
+});
+tilesEl.querySelectorAll("canvas").forEach(c => spark(c, DATA.series[c.dataset.k], SERIES_COLORS[c.dataset.k]));
+
+function spark(cv, s, color) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 200, h = 34;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const x = cv.getContext("2d"); x.scale(dpr, dpr);
+  const v = s.v.slice(-120), mn = Math.min(...v), mx = Math.max(...v), sp = (mx - mn) || 1;
+  x.beginPath();
+  v.forEach((val, i) => {
+    const px = (i / (v.length - 1)) * (w - 2) + 1, py = h - 3 - ((val - mn) / sp) * (h - 7);
+    i ? x.lineTo(px, py) : x.moveTo(px, py);
+  });
+  x.strokeStyle = color;
+  x.lineWidth = 1.6; x.lineJoin = "round"; x.stroke();
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, x.strokeStyle + "33"); g.addColorStop(1, x.strokeStyle + "00");
+  x.lineTo(w - 1, h); x.lineTo(1, h); x.closePath(); x.fillStyle = g; x.fill();
+}
+
+/* ---------------- chips ---------------- */
+const chipsEl = $("#chips");
+ORDER.forEach(k => {
+  const s = DATA.series[k];
+  const b = document.createElement("button");
+  b.className = "chip on"; b.dataset.k = k;
+  b.style.setProperty("--c", SERIES_COLORS[k]);
+  b.innerHTML = '<span class="sw"></span>' + s.label;
+  b.onclick = () => {
+    const on = Object.values(state.on);
+    if (state.on[k] && on.filter(Boolean).length === 1) return;   // never hide the last one
+    state.on[k] = !state.on[k]; b.classList.toggle("on", state.on[k]);
+    if (state.mode === "abs" && onCount() > 1) setMode("idx");
+    drawMain();
+  };
+  chipsEl.appendChild(b);
+});
+const onCount = () => Object.values(state.on).filter(Boolean).length;
+
+$("#range").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...$("#range").children].forEach(x => x.classList.toggle("on", x === b));
+  state.range = +b.dataset.r; drawMain();
+};
+$("#mode").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  setMode(b.dataset.m);
+};
+function setMode(m) {
+  if (m === "abs" && onCount() > 1) m = "idx";      // $ mode only makes sense for one unit
+  state.mode = m;
+  [...$("#mode").children].forEach(x => x.classList.toggle("on", x.dataset.m === m));
+  drawMain();
+}
+
+/* ---------------- generic time-series chart ---------------- */
+function chart(cv, tipEl, cfg) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  x.clearRect(0, 0, W, H);
+  const pad = { l: 52, r: 14, t: 14, b: 26 };
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const t0 = cfg.t0, t1 = cfg.t1;
+  const X = t => pad.l + ((t - t0) / (t1 - t0)) * iw;
+
+  const all = cfg.series.flatMap(s => s.y);
+  let mn = Math.min(...all), mx = Math.max(...all);
+  if (cfg.zeroBase) mn = 0;
+  const padY = (mx - mn) * 0.12 || 1;
+  /* an index axis should bottom out at its 100 baseline, not float below it */
+  if (cfg.floor != null) { mn = Math.min(cfg.floor, mn) * 0.998; mx += padY; }
+  else { mn -= padY; mx += padY; }
+  const Y = v => pad.t + ih - ((v - mn) / (mx - mn)) * ih;
+
+  /* grid + y labels */
+  x.font = "10px ui-monospace,monospace"; x.textAlign = "right"; x.textBaseline = "middle";
+  const steps = 5;
+  for (let i = 0; i <= steps; i++) {
+    const v = mn + (mx - mn) * (i / steps), py = Y(v);
+    x.strokeStyle = "rgba(35,42,54,.85)"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke();
+    x.fillStyle = "#5d6878";
+    x.fillText(cfg.fmtY(v), pad.l - 8, py);
+  }
+  /* x ticks */
+  x.textAlign = "center"; x.textBaseline = "top";
+  const months = (t1 - t0) / dayMs;
+  const every = months > 330 ? 60 : months > 150 ? 30 : 14;
+  let cur = new Date(t0); cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), 1));
+  for (let t = cur.getTime(); t <= t1; t += every * dayMs) {
+    if (t < t0) continue;
+    x.fillStyle = "#5d6878"; x.fillText(fmtMon(t), X(t), H - pad.b + 8);
+    x.strokeStyle = "rgba(35,42,54,.5)"; x.beginPath(); x.moveTo(X(t), pad.t); x.lineTo(X(t), pad.t + ih); x.stroke();
+  }
+  /* series */
+  cfg.series.forEach(s => {
+    x.beginPath();
+    let started = false;
+    for (let i = 0; i < s.x.length; i++) {
+      if (s.x[i] < t0) continue;
+      const px = X(s.x[i]), py = Y(s.y[i]);
+      started ? x.lineTo(px, py) : (x.moveTo(px, py), started = true);
+    }
+    x.strokeStyle = s.color; x.lineWidth = 2; x.lineJoin = "round"; x.lineCap = "round";
+    x.stroke();
+    const lastI = s.x.length - 1;
+    if (lastI >= 0) {
+      x.beginPath(); x.arc(X(s.x[lastI]), Y(s.y[lastI]), 3, 0, 7); x.fillStyle = s.color; x.fill();
+    }
+    if (cfg.fill && s.x.length > 1) {
+      const g = x.createLinearGradient(0, pad.t, 0, pad.t + ih);
+      g.addColorStop(0, s.color + "2e"); g.addColorStop(1, s.color + "00");
+      x.lineTo(X(s.x[lastI]), pad.t + ih); x.lineTo(X(s.x[0]), pad.t + ih); x.closePath();
+      x.fillStyle = g; x.fill();
+    }
+  });
+  (cfg.marks || []).forEach(mk => {
+    if (mk.t < t0 || mk.t > t1) return;
+    const px = X(mk.t);
+    x.setLineDash([3, 4]); x.strokeStyle = "rgba(245,184,69,.55)"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(px, pad.t); x.lineTo(px, pad.t + ih); x.stroke(); x.setLineDash([]);
+    x.save();
+    x.font = "10px system-ui,sans-serif"; x.fillStyle = "rgba(245,184,69,.9)";
+    x.textAlign = px > W - 200 ? "right" : "left"; x.textBaseline = "top";
+    x.fillText("▲ " + mk.short, px > W - 200 ? px - 6 : px + 6, pad.t + 2);
+    x.restore();
+  });
+
+  if (cfg.refLine != null) {
+    const py = Y(cfg.refLine);
+    x.setLineDash([4, 4]); x.strokeStyle = "rgba(139,151,168,.5)"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke(); x.setLineDash([]);
+  }
+
+  /* hover */
+  cv.onmouseleave = () => { tipEl.style.opacity = 0; };
+  cv.onmousemove = ev => {
+    const r = cv.getBoundingClientRect(), mxp = ev.clientX - r.left;
+    const tAt = t0 + ((mxp - pad.l) / iw) * (t1 - t0);
+    let rows = [], best = null, bestD = Infinity;
+    cfg.series.forEach(s => {
+      let bi = -1;
+      for (let i = 0; i < s.x.length; i++) if (s.x[i] <= tAt) bi = i;
+      if (bi >= 0 && Math.abs(s.x[bi] - tAt) < bestD) { bestD = Math.abs(s.x[bi] - tAt); best = s.x[bi]; }
+    });
+    if (best == null) return;
+    const px = X(best);
+    x.strokeStyle = "rgba(232,237,245,.28)"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(px, pad.t); x.lineTo(px, pad.t + ih); x.stroke();
+    cfg.series.forEach(s => {
+      let bi = -1;
+      for (let i = 0; i < s.x.length; i++) if (s.x[i] <= best) bi = i;
+      if (bi < 0) return;
+      x.beginPath(); x.arc(X(s.x[bi]), Y(s.y[bi]), 3.4, 0, 7); x.fillStyle = s.color; x.fill();
+      rows.push('<div class="tt-row"><span><span class="sw" style="background:' + s.color + '"></span>' + s.name +
+        '</span><b>' + s.fmt(s.y[bi]) + '</b></div>');
+    });
+    tipEl.innerHTML = '<div class="tt-date">' + fmtDay(best) + '</div>' + rows.join("");
+    tipEl.style.opacity = 1;
+    const tw = tipEl.offsetWidth;
+    tipEl.style.left = Math.min(Math.max(px - tw / 2, 4), W - tw - 4) + "px";
+    tipEl.style.top = "10px";
+  };
+}
+
+/* ---------------- main chart draw ---------------- */
+function drawMain() {
+  const last = toT(DATA.as_of);
+  const t0 = state.range ? last - state.range * dayMs : Math.min(...ORDER.map(k => DATA.series[k].t[0]));
+  const t1 = last;
+  const picks = ORDER.filter(k => state.on[k]);
+
+  let series, fmtY;
+  if (state.mode === "abs") {
+    const k = picks[0], s = DATA.series[k];
+    series = [{ name: s.label, color: SERIES_COLORS[k], x: s.t, y: s.v.slice(),
+                fmt: v => "$" + fmt(v, 2) + " " + s.unit }];
+    fmtY = v => "$" + fmt(v, v < 10 ? 2 : v < 100 ? 1 : 0);
+  } else {
+    series = picks.map(k => {
+      const s = DATA.series[k];
+      const base = s.v[s.t.findIndex(t => t >= t0)] || s.v[0];
+      return { name: s.label, color: SERIES_COLORS[k], x: s.t, y: s.v.map(v => (v / base) * 100),
+               fmt: v => (v > 0 ? "+" : "") + (v - 100).toFixed(1) + "% · " + "$" + fmt(v * base / 100, 2) };
+    });
+    fmtY = v => (v / 100).toFixed(2) + "\u00d7";
+  }
+  const marks = (DATA.marks || [])
+    .filter(m => m.keys.some(k => state.on[k] && (state.mode === "idx" || picks[0] === k)))
+    .map(m => ({ t: toT(m.date), short: m.short || m.label }));
+  chart($("#mainChart"), $("#tip"), { series, t0, t1, fmtY, marks,
+    fill: series.length === 1, refLine: state.mode === "idx" ? 100 : null,
+    floor: state.mode === "idx" ? 100 : null });
+
+  const span = state.range ? (state.range + "d") : "full history";
+  $("#mainNote").innerHTML =
+    "<span>window: " + span + "</span>" +
+    "<span>mode: " + (state.mode === "idx" ? "indexed to 100 at window start" : "$ as quoted — single series") + "</span>" +
+    "<span>hover for dated quotes</span>";
+}
+
+/* ---------------- drawdown ---------------- */
+function drawDD() {
+  const series = ORDER.map(k => {
+    const s = DATA.series[k], peak = s.st.peak;
+    return { name: s.label, color: SERIES_COLORS[k], x: s.t, y: s.v.map(v => (v / peak - 1) * 100),
+             fmt: v => v.toFixed(1) + "% off peak" };
+  });
+  const last = toT(DATA.as_of);
+  chart($("#ddChart"), $("#tip2"), {
+    series, t0: Math.min(...ORDER.map(k => DATA.series[k].t[0])), t1: last,
+    fmtY: v => v.toFixed(0) + "%", refLine: 0, zeroBase: false
+  });
+}
+
+/* ---------------- verdict cards ---------------- */
+$("#vNand").innerHTML =
+  "512Gb TLC peaked at <b>$" + fmt(sn.peak, 2) + "</b> (" + fmtDay(toT(sn.peak_date)) + "), sat between $19–21 for five " +
+  "months, then broke: <b>" + pct(sn.chg_30d) + " in 30 days</b> and −9.19% in the single week to 26 Oct. Wafer contract " +
+  "prices stopped rising in October for the first time in 21 months. This is the one leg of the market that has clearly turned.";
+
+$("#vDram").innerHTML =
+  "DDR4 8Gb spot is at a record <b>$" + fmt(sd.last, 2) + "</b> (" + fmtDay(toT(sd.last_date)) + "), +" +
+  fmt(sd.since_first_pct, 0) + "% in twelve months, with no drawdown at all. DDR5 and DDR4 retail kits are +" +
+  pct(s5.chg_90d) + " and +" + pct(DATA.series.ddr4_retail.st.chg_90d) + " over 90 days. TrendForce still guides " +
+  "conventional DRAM contract +10–15% QoQ for 4Q26 — HBM and server allocation keep crowding out consumer wafers.";
+
+$("#vRetail").innerHTML =
+  "Client SSD contract prices are still rising (+20% QoQ in 3Q26) but decelerating, and NAND contract guidance for 4Q26 " +
+  "is +15–20%. Retail kits are the first place a top shows: DDR5 is <b>" + pct(s5.off_peak_pct) + "</b> off its 23 Oct " +
+  "record and DDR4 <b>" + pct(DATA.series.ddr4_retail.st.off_peak_pct) + "</b> off its April high. Two weeks of softening " +
+  "is noise; a lower low in the next 60 days is a trend.";
+
+/* ---------------- SSD ladder ---------------- */
+const q26 = DATA.ssd_contract.quarters[1], q25 = DATA.ssd_contract.quarters[0];
+/* Only the 256GB tier has a prior observation in this dataset. The others are
+   shown as 3Q26 actuals with no delta — a made-up "previous quarter" would be
+   a fabricated number, and this page does not ship those. */
+const ladder = [
+  { name: "256GB M.2 TLC", v: q26.gb256, prev: q25.gb256, note: "value grade, PCIe" },
+  { name: "512GB M.2 TLC", v: q26.gb512, prev: null, note: "value grade, PCIe" },
+  { name: "1TB M.2 TLC", v: q26.gb1t, prev: null, note: "value grade, PCIe" }
+];
+const maxV = Math.max(...ladder.map(d => d.v));
+$("#ladder").innerHTML = ladder.map(d => {
+  const w = (d.v / maxV) * 100;
+  const left = d.prev
+    ? '$' + fmt(d.prev, 2) + ' <span style="color:var(--dim)">3Q25</span>'
+    : '<span style="color:var(--dim)">no 3Q25 quote on record</span>';
+  const right = d.prev
+    ? '<span style="color:var(--up)">+' + fmt((d.v / d.prev - 1) * 100, 0) + '% vs 3Q25</span>'
+    : '<span style="color:var(--dim)">—</span>';
+  return '<div class="card"><h3>' + d.name + '</h3><div class="sub">' + d.note + ' · 3Q26 average</div>' +
+    '<div class="q2" style="margin-top:10px"><span>' + left + '</span>' + right + '</div>' +
+    '<div class="bar"><i style="width:' + w + '%"></i></div>' +
+    '<div class="q2"><span style="font-size:15px"><b>$' + fmt(d.v, 2) + '</b></span>' +
+    '<span style="color:var(--dim)">per drive, contract</span></div></div>';
+}).join("");
+
+/* ---------------- spot table ---------------- */
+$("#spotTbl").querySelector("tbody").innerHTML = DATA.snapshot.map(r => {
+  const unit = r.unit === "$" ? "" : r.unit;
+  return "<tr><td>" + r.name + "</td><td class='num'>" + (r.unit === "$" ? "$" + fmt(r.value, r.value > 100 ? 2 : 3) : fmt(r.value, 2))
+    + "</td><td class='num " + cls(r.chg) + "'>" + (r.chg == null ? "—" : (r.chg > 0 ? "+" : "") + fmt(r.chg, 2) + "%")
+    + "</td><td class='num'>" + r.as_of + "</td><td style='text-align:left;color:var(--muted);font-size:11.5px'>" + r.src + "</td></tr>";
+}).join("");
+
+/* ---------------- monthly ledger ---------------- */
+function monthly(pts) {
+  const m = new Map();
+  for (const [d, v] of pts) m.set(d.slice(0, 7), [d, v]);   // last reading in each month
+  return [...m.entries()].sort().map(([mon, p]) => ({ mon, d: p[0], v: p[1] }));
+}
+const M = {
+  d5: monthly(DATA.series.ddr5_retail.pts), d4: monthly(DATA.series.ddr4_retail.pts),
+  ds: monthly(DATA.series.dram_spot.pts), ns: monthly(DATA.series.nand_spot.pts)
+};
+function renderLedger(n) {
+  const months = [...new Set([...M.d5, ...M.ns].map(x => x.mon))].sort().slice(-n);
+  const find = (arr, mon) => arr.find(x => x.mon === mon);
+  const rows = months.map((mon, i) => {
+    const a = find(M.d5, mon), b = find(M.d4, mon), c = find(M.ds, mon), e = find(M.ns, mon);
+    const prevN = i > 0 ? find(M.ns, months[i - 1]) : null;
+    const d5p = i > 0 ? find(M.d5, months[i - 1]) : null;
+    const d4p = i > 0 ? find(M.d4, months[i - 1]) : null;
+    const nn = e && prevN ? (e.v / prevN.v - 1) * 100 : null;
+    const d5c = a && d5p ? (a.v / d5p.v - 1) * 100 : null;
+    const d4c = b && d4p ? (b.v / d4p.v - 1) * 100 : null;
+    return "<tr><td>" + MONTHS[+mon.slice(5, 7) - 1] + " " + mon.slice(2, 4) + "</td>" +
+      "<td class='num'>" + (a ? "$" + fmt(a.v, 2) : "—") + "</td><td class='num " + cls(d5c) + "'>" + (d5c == null ? "—" : pct(d5c)) + "</td>" +
+      "<td class='num'>" + (b ? "$" + fmt(b.v, 2) : "—") + "</td><td class='num " + cls(d4c) + "'>" + (d4c == null ? "—" : pct(d4c)) + "</td>" +
+      "<td class='num'>" + (c ? "$" + fmt(c.v, 2) : "—") + "</td>" +
+      "<td class='num'>" + (e ? "$" + fmt(e.v, 2) : "—") + "</td><td class='num " + cls(nn) + "'>" + (nn == null ? "—" : pct(nn)) + "</td></tr>";
+  });
+  $("#monTbl").querySelector("tbody").innerHTML = rows.reverse().join("");
+}
+$("#ledgerMode").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...$("#ledgerMode").children].forEach(x => x.classList.toggle("on", x === b));
+  renderLedger(+b.dataset.l);
+};
+
+/* ---------------- go ---------------- */
+drawMain(); drawDD(); renderLedger(12);
+let rt;
+window.addEventListener("resize", () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => {
+    tilesEl.querySelectorAll("canvas").forEach(c => spark(c, DATA.series[c.dataset.k], SERIES_COLORS[c.dataset.k]));
+    drawMain(); drawDD();
+  }, 120);
+});
+</script>
+</body>
+</html>
