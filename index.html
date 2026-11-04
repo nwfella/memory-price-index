@@ -445,8 +445,9 @@ function chart(cv, tipEl, cfg) {
   const dpr = window.devicePixelRatio || 1;
   const W = cv.clientWidth, H = cv.clientHeight;
   cv.width = W * dpr; cv.height = H * dpr;
-  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
-  x.clearRect(0, 0, W, H);
+  const x = cv.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+
   const pad = { l: 52, r: 14, t: 14, b: 26 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const t0 = cfg.t0, t1 = cfg.t1;
@@ -461,95 +462,134 @@ function chart(cv, tipEl, cfg) {
   else { mn -= padY; mx += padY; }
   const Y = v => pad.t + ih - ((v - mn) / (mx - mn)) * ih;
 
-  /* grid + y labels */
-  x.font = "10px ui-monospace,monospace"; x.textAlign = "right"; x.textBaseline = "middle";
-  const steps = 5;
-  for (let i = 0; i <= steps; i++) {
-    const v = mn + (mx - mn) * (i / steps), py = Y(v);
-    x.strokeStyle = "rgba(35,42,54,.85)"; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke();
-    x.fillStyle = "#5d6878";
-    x.fillText(cfg.fmtY(v), pad.l - 8, py);
-  }
-  /* x ticks */
-  x.textAlign = "center"; x.textBaseline = "top";
-  const months = (t1 - t0) / dayMs;
-  const every = months > 330 ? 60 : months > 150 ? 30 : 14;
-  let cur = new Date(t0); cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), 1));
-  for (let t = cur.getTime(); t <= t1; t += every * dayMs) {
-    if (t < t0) continue;
-    x.fillStyle = "#5d6878"; x.fillText(fmtMon(t), X(t), H - pad.b + 8);
-    x.strokeStyle = "rgba(35,42,54,.5)"; x.beginPath(); x.moveTo(X(t), pad.t); x.lineTo(X(t), pad.t + ih); x.stroke();
-  }
-  /* series */
-  cfg.series.forEach(s => {
-    x.beginPath();
-    let started = false;
-    for (let i = 0; i < s.x.length; i++) {
-      if (s.x[i] < t0) continue;
-      const px = X(s.x[i]), py = Y(s.y[i]);
-      started ? x.lineTo(px, py) : (x.moveTo(px, py), started = true);
-    }
-    x.strokeStyle = s.color; x.lineWidth = 2; x.lineJoin = "round"; x.lineCap = "round";
-    x.stroke();
-    const lastI = s.x.length - 1;
-    if (lastI >= 0) {
-      x.beginPath(); x.arc(X(s.x[lastI]), Y(s.y[lastI]), 3, 0, 7); x.fillStyle = s.color; x.fill();
-    }
-    if (cfg.fill && s.x.length > 1) {
-      const g = x.createLinearGradient(0, pad.t, 0, pad.t + ih);
-      g.addColorStop(0, s.color + "2e"); g.addColorStop(1, s.color + "00");
-      x.lineTo(X(s.x[lastI]), pad.t + ih); x.lineTo(X(s.x[0]), pad.t + ih); x.closePath();
-      x.fillStyle = g; x.fill();
-    }
-  });
-  (cfg.marks || []).forEach(mk => {
-    if (mk.t < t0 || mk.t > t1) return;
-    const px = X(mk.t);
-    x.setLineDash([3, 4]); x.strokeStyle = "rgba(245,184,69,.55)"; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(px, pad.t); x.lineTo(px, pad.t + ih); x.stroke(); x.setLineDash([]);
-    x.save();
-    x.font = "10px system-ui,sans-serif"; x.fillStyle = "rgba(245,184,69,.9)";
-    x.textAlign = px > W - 200 ? "right" : "left"; x.textBaseline = "top";
-    x.fillText("▲ " + mk.short, px > W - 200 ? px - 6 : px + 6, pad.t + 2);
-    x.restore();
-  });
+  /* Every frame is painted from scratch. The crosshair is part of the frame —
+     stroking it on top of a previous frame is what smeared lines across the
+     plot on every mousemove. */
+  function paint(hoverT) {
+    x.clearRect(0, 0, W, H);
 
-  if (cfg.refLine != null) {
-    const py = Y(cfg.refLine);
-    x.setLineDash([4, 4]); x.strokeStyle = "rgba(139,151,168,.5)"; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke(); x.setLineDash([]);
+    /* grid + y labels */
+    x.font = "10px ui-monospace,monospace"; x.textAlign = "right"; x.textBaseline = "middle";
+    for (let i = 0; i <= 5; i++) {
+      const v = mn + (mx - mn) * (i / 5), py = Y(v);
+      x.strokeStyle = "rgba(35,42,54,.85)"; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke();
+      x.fillStyle = "#5d6878";
+      x.fillText(cfg.fmtY(v), pad.l - 8, py);
+    }
+
+    /* x ticks */
+    x.textAlign = "center"; x.textBaseline = "top";
+    const months = (t1 - t0) / dayMs;
+    const every = months > 330 ? 60 : months > 150 ? 30 : 14;
+    const first = new Date(t0);
+    const startTick = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1);
+    for (let t = startTick; t <= t1; t += every * dayMs) {
+      if (t < t0) continue;
+      x.fillStyle = "#5d6878"; x.fillText(fmtMon(t), X(t), H - pad.b + 8);
+      x.strokeStyle = "rgba(35,42,54,.5)"; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(X(t), pad.t); x.lineTo(X(t), pad.t + ih); x.stroke();
+    }
+
+    /* series */
+    cfg.series.forEach(s => {
+      x.beginPath();
+      let started = false;
+      for (let i = 0; i < s.x.length; i++) {
+        if (s.x[i] < t0) continue;
+        const px = X(s.x[i]), py = Y(s.y[i]);
+        started ? x.lineTo(px, py) : (x.moveTo(px, py), started = true);
+      }
+      x.strokeStyle = s.color; x.lineWidth = 2; x.lineJoin = "round"; x.lineCap = "round";
+      x.stroke();
+      const lastI = s.x.length - 1;
+      if (lastI >= 0 && s.x[lastI] >= t0) {
+        x.beginPath(); x.arc(X(s.x[lastI]), Y(s.y[lastI]), 3, 0, 7); x.fillStyle = s.color; x.fill();
+      }
+    });
+
+    /* annotated discontinuities */
+    (cfg.marks || []).forEach(mk => {
+      if (mk.t < t0 || mk.t > t1) return;
+      const px = X(mk.t);
+      x.setLineDash([3, 4]); x.strokeStyle = "rgba(245,184,69,.55)"; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(px, pad.t); x.lineTo(px, pad.t + ih); x.stroke(); x.setLineDash([]);
+      x.save();
+      x.font = "10px system-ui,sans-serif"; x.fillStyle = "rgba(245,184,69,.9)";
+      x.textAlign = px > W - 200 ? "right" : "left"; x.textBaseline = "top";
+      x.fillText("▲ " + mk.short, px > W - 200 ? px - 6 : px + 6, pad.t + 2);
+      x.restore();
+    });
+
+    /* reference line */
+    if (cfg.refLine != null) {
+      const py = Y(cfg.refLine);
+      x.setLineDash([4, 4]); x.strokeStyle = "rgba(139,151,168,.5)"; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(pad.l, py); x.lineTo(W - pad.r, py); x.stroke(); x.setLineDash([]);
+    }
+
+    if (hoverT == null) return null;
+
+    /* crosshair — one stroke, on a clean frame */
+    const hx = X(hoverT);
+    x.strokeStyle = "rgba(232,237,245,.30)"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(hx, pad.t); x.lineTo(hx, pad.t + ih); x.stroke();
+
+    const rows = [];
+    cfg.series.forEach(s => {
+      let bi = -1;
+      for (let i = 0; i < s.x.length; i++) if (s.x[i] <= hoverT) bi = i;
+      if (bi < 0) return;
+      const pxc = X(s.x[bi]), pyc = Y(s.y[bi]);
+      x.beginPath(); x.arc(pxc, pyc, 4, 0, 7);
+      x.fillStyle = s.color; x.fill();
+      x.strokeStyle = "rgba(10,13,18,.85)"; x.lineWidth = 1.5; x.stroke();
+      rows.push('<div class="tt-row"><span><span class="sw" style="background:' + s.color + '"></span>' +
+        s.name + '</span><b>' + s.fmt(s.y[bi]) + '</b></div>');
+    });
+    return { px: hx, rows };
   }
 
-  /* hover */
-  cv.onmouseleave = () => { tipEl.style.opacity = 0; };
-  cv.onmousemove = ev => {
-    const r = cv.getBoundingClientRect(), mxp = ev.clientX - r.left;
+  /* ---------- interaction ---------- */
+  let lastHover = null;
+
+  function showAt(mxp) {
+    if (cfg.series.length === 0) return;
+    if (mxp < pad.l - 6 || mxp > W - pad.r + 6) { clear(); return; }
     const tAt = t0 + ((mxp - pad.l) / iw) * (t1 - t0);
-    let rows = [], best = null, bestD = Infinity;
+    let best = null, bestD = Infinity;
     cfg.series.forEach(s => {
       let bi = -1;
       for (let i = 0; i < s.x.length; i++) if (s.x[i] <= tAt) bi = i;
       if (bi >= 0 && Math.abs(s.x[bi] - tAt) < bestD) { bestD = Math.abs(s.x[bi] - tAt); best = s.x[bi]; }
     });
-    if (best == null) return;
-    const px = X(best);
-    x.strokeStyle = "rgba(232,237,245,.28)"; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(px, pad.t); x.lineTo(px, pad.t + ih); x.stroke();
-    cfg.series.forEach(s => {
-      let bi = -1;
-      for (let i = 0; i < s.x.length; i++) if (s.x[i] <= best) bi = i;
-      if (bi < 0) return;
-      x.beginPath(); x.arc(X(s.x[bi]), Y(s.y[bi]), 3.4, 0, 7); x.fillStyle = s.color; x.fill();
-      rows.push('<div class="tt-row"><span><span class="sw" style="background:' + s.color + '"></span>' + s.name +
-        '</span><b>' + s.fmt(s.y[bi]) + '</b></div>');
-    });
-    tipEl.innerHTML = '<div class="tt-date">' + fmtDay(best) + '</div>' + rows.join("");
+    if (best == null) { clear(); return; }
+    if (best === lastHover && tipEl.style.opacity === "1") return;   // same column: nothing to redraw
+    lastHover = best;
+
+    const info = paint(best);
+    if (!info) return;
+    tipEl.innerHTML = '<div class="tt-date">' + fmtDay(best) + '</div>' + info.rows.join("");
     tipEl.style.opacity = 1;
     const tw = tipEl.offsetWidth;
-    tipEl.style.left = Math.min(Math.max(px - tw / 2, 4), W - tw - 4) + "px";
+    tipEl.style.left = Math.min(Math.max(info.px - tw / 2, 4), Math.max(W - tw - 4, 4)) + "px";
     tipEl.style.top = "10px";
+  }
+
+  function clear() {
+    if (lastHover === null && tipEl.style.opacity === "0") return;
+    lastHover = null;
+    paint(null);
+    tipEl.style.opacity = 0;
+  }
+
+  cv.onmouseleave = clear;
+  cv.onmousemove = ev => {
+    const r = cv.getBoundingClientRect();
+    showAt(ev.clientX - r.left);
   };
+
+  paint(null);
 }
 
 /* ---------------- main chart draw ---------------- */

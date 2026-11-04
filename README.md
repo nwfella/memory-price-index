@@ -52,9 +52,12 @@ no LLM in the loop:
 2. **guard:** if the TrendForce re-parse degrades, the last good `spot_series.csv` is restored — one bad
    upstream day cannot wipe 12 months of history off the chart
 3. **gate:** the rebuilt page must pass size + marker checks or nothing is deployed
-4. **publish:** commit `index.html` + `data/dataset.json` and push (non-interactive git, network-only retries),
+4. **hover gate:** `scripts/verify_hover.py` sweeps 61 synthetic mousemoves across the chart in headless Chrome
+   and asserts exactly one crosshair column is painted (idle 0, after sweep 1, after leave 0). The smear bug this
+   catches drew 59 stacked lines and never cleared them
+5. **publish:** commit `index.html` + `data/dataset.json` and push (non-interactive git, network-only retries),
    then poll Pages until the live bytes match the pushed bytes
-5. **quiet:** if the material data is unchanged, the run publishes nothing and restores its worktree
+6. **quiet:** if the material data is unchanged, the run publishes nothing and restores its worktree
 
 Stdout is the daily report — one line, e.g.
 `memwatch 2026-11-04 — DDR5 $19.49/GB (+11.0% 30d), DDR4 chip $46.82, NAND 512Gb $16.15 (-29.8% off peak). Published 2da6cad — live verified`

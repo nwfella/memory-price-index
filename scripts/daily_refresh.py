@@ -170,6 +170,12 @@ if len(html) < 60000 or missing:
     die("memwatch: GATE FAILED (%d bytes, missing %s) — not deploying.\n%s"
         % (len(html), missing or "-", tail(out)))
 
+# interactive-chart gate: hovering must repaint the frame, not stack crosshairs
+rc, hv, hverr = run([PY, os.path.join(REPO, "scripts", "verify_hover.py")], timeout=300)
+if rc != 0:
+    die("memwatch: HOVER GATE FAILED — not deploying.\n%s" % tail(hv + "\n" + hverr))
+hover_note = "" if "[skip]" in hv else " hover-gate ok"
+
 ds = json.load(open(os.path.join(DATA, "dataset.json"), encoding="utf-8"))
 st = ds["stats"]
 s5, sd, sn = st["ddr5_retail"], st["dram_spot"], st["nand_spot"]
@@ -213,4 +219,4 @@ log("memwatch %s — DDR5 $%.2f/GB (%+.1f%% 30d), DDR4 chip $%.2f%s, NAND 512Gb 
         as_of, s5["last"], s5["chg_30d"] or 0, sd["last"],
         " (record)" if sd["off_peak_pct"] >= -0.05 else "",
         sn["last"], sn["off_peak_pct"], sha,
-        "live verified" if live else "pushed (Pages still building)", warn))
+        "live verified" if live else "pushed (Pages still building)", warn + hover_note))
