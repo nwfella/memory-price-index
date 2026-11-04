@@ -43,6 +43,22 @@ is baked into the page.
 - **No invented numbers.** The SSD ladder shows a prior-quarter delta only where a prior quarter actually
   exists in the dataset; the other two tiers show actuals and say so.
 
+## Automation
+
+A Hermes cron job (`Memwatch daily refresh`, 07:40 local) runs `scripts/daily_refresh.py` every day with
+no LLM in the loop:
+
+1. re-download the retail index, re-discover and re-parse the weekly spot posts
+2. **guard:** if the TrendForce re-parse degrades, the last good `spot_series.csv` is restored — one bad
+   upstream day cannot wipe 12 months of history off the chart
+3. **gate:** the rebuilt page must pass size + marker checks or nothing is deployed
+4. **publish:** commit `index.html` + `data/dataset.json` and push (non-interactive git, network-only retries),
+   then poll Pages until the live bytes match the pushed bytes
+5. **quiet:** if the material data is unchanged, the run publishes nothing and restores its worktree
+
+Stdout is the daily report — one line, e.g.
+`memwatch 2026-11-04 — DDR5 $19.49/GB (+11.0% 30d), DDR4 chip $46.82, NAND 512Gb $16.15 (-29.8% off peak). Published 2da6cad — live verified`
+
 ## Rebuild
 
 ```bash
