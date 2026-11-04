@@ -1,0 +1,4 @@
+# keep every text file LF in the repo so re-downloading an identical CSV
+# does not show up as a whole-file diff (Windows checkout conversion)
+* text=auto eol=lf
+*.png binary

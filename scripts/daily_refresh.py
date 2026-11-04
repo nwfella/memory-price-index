@@ -32,6 +32,7 @@ PY = sys.executable
 BRANCH = "main"
 LIVE = "https://nwfella.github.io/memory-price-index/"
 GENERATED = ["index.html", "data/dataset.json"]
+RAW = ["data/ramradar.csv", "data/spot_series.csv", "data/spot_posts.json", "data/spot_urls.txt"]
 SOURCES = ["template.html", "data/build.py", "data/build_dataset.py",
            "data/fetch_spot_quotes.py", "data/refresh.py", "scripts"]
 MIN_SPOT_ROWS = 30          # a healthy re-parse yields 37 priced weekly quotes
@@ -177,13 +178,13 @@ as_of = ds["as_of"]
 # ---------------------------------------------------------------- 4. material change?
 unchanged = (not FORCE) and head_signature() == signature(ds)
 if unchanged:
-    git("restore", "--worktree", "--", *GENERATED)
+    git("restore", "--worktree", "--", *(GENERATED + RAW))
     log("memwatch %s — no new upstream data (DDR5 $%.2f/GB, NAND $%.2f). Nothing to publish." % (
         as_of, s5["last"], sn["last"]) + warn)
     sys.exit(0)
 
 # ---------------------------------------------------------------- 5. commit + push
-git("add", "--", *GENERATED)
+git("add", "--", *(GENERATED + RAW))
 msg = ("daily: %s — DDR5 $%.2f/GB (%+.1f%% off peak), DDR4 chip $%.2f, NAND 512Gb $%.2f (%+.1f%% off peak)"
        % (as_of, s5["last"], s5["off_peak_pct"], sd["last"], sn["last"], sn["off_peak_pct"]))
 rc, out, err = git("-c", "user.name=nwfella", "-c", "user.email=nwfella@users.noreply.github.com",
