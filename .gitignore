@@ -5,3 +5,8 @@ data/probe*.html
 .DS_Store
 live_check.html
 data/live_check.html
+data/hover_probe*.html
+data/hp_*.html
+data/live_*.html
+data/index_fixed.html
+data/*.bak
