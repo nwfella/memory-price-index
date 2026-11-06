@@ -174,7 +174,9 @@ if len(html) < 60000 or missing:
 rc, hv, hverr = run([PY, os.path.join(REPO, "scripts", "verify_hover.py")], timeout=300)
 if rc != 0:
     die("memwatch: HOVER GATE FAILED — not deploying.\n%s" % tail(hv + "\n" + hverr))
-hover_note = "" if "[skip]" in hv else " hover-gate ok"
+# say so when the gate could not run, so a skipped check is never mistaken for a passed one
+hover_note = (" hover-gate skipped (no headless browser in this context)" if "[skip]" in hv
+              else " hover-gate ok")
 
 ds = json.load(open(os.path.join(DATA, "dataset.json"), encoding="utf-8"))
 st = ds["stats"]
