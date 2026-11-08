@@ -122,16 +122,28 @@ def live_matches(local_bytes, budget=150):
 
 
 def push_with_retry(waits=(0, 15, 45)):
+    """Retry network-shaped failures AND timeouts; an auth rejection fails at once."""
     last = (-1, "", "")
     for wait in waits:
         if wait:
             time.sleep(wait)
-        last = git("push", "origin", BRANCH)
+        last = git("push", "origin", BRANCH, timeout=240)
         if last[0] == 0:
             return last
+        if last[0] == -1:                      # tree-killed timeout: transient by definition
+            continue
         if not TRANSIENT.search((last[2] or "") + (last[1] or "")):
             break            # auth or policy failure: fail fast, do not retry
     return last
+
+
+def ahead_count():
+    """Commits built but never published — the stuck state a failed push leaves behind."""
+    rc, out, _ = git("rev-list", "--count", "origin/%s..HEAD" % BRANCH)
+    try:
+        return int((out or "0").strip()) if rc == 0 else 0
+    except ValueError:
+        return 0
 
 
 # ---------------------------------------------------------------- 1. preflight
@@ -187,6 +199,19 @@ as_of = ds["as_of"]
 unchanged = (not FORCE) and head_signature() == signature(ds)
 if unchanged:
     git("restore", "--worktree", "--", *(GENERATED + RAW))
+    queued = ahead_count()
+    if queued:
+        # A previous run built and committed but its push failed. The data is unchanged
+        # since then, so publish the backlog rather than skipping forever.
+        rc, out, err = push_with_retry()
+        rc2, sha2, _ = git("rev-parse", "--short", "HEAD")
+        if rc != 0:
+            die("memwatch %s — no new data, but %d queued commit(s) still unpushed: %s\n%s"
+                % (as_of, queued, sha2.strip(), tail(out + "\n" + err)))
+        live = live_matches(open(index_path, "rb").read())
+        log("memwatch %s — no new upstream data; published %d queued commit(s) %s — %s%s" % (
+            as_of, queued, sha2.strip(), "live verified" if live else "pushed (Pages building)", warn))
+        sys.exit(0)
     log("memwatch %s — no new upstream data (DDR5 $%.2f/GB, NAND $%.2f). Nothing to publish." % (
         as_of, s5["last"], sn["last"]) + warn)
     sys.exit(0)
