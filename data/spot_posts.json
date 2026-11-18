@@ -643,5 +643,35 @@
   "err": null,
   "ddr4_ctx": "mainstream chips (i.e., DDR4 1Gx8 3200MT/s) slightly decreased by 0.09% from US$46.86 last week (October 28) to US$46.82 this week (November 3).",
   "nand_ctx": "512Gb TLC wafers dropped by 4.33% this week (November 2), with average quotations arriving at US$16.152."
+ },
+ {
+  "url": "https://www.trendforce.com/news/2026/11/17/news-nand-spot-prices-reverse-course-sliding-20-in-2-weeks-amid-weak-consumer-demand-ymtc-competition/",
+  "article_date": "2026-11-17",
+  "ddr4_date": null,
+  "nand_date": null,
+  "obs_date": "2026-11-17",
+  "ddr4_mainstream_usd": null,
+  "nand512_tlc_usd": null,
+  "ddr4_pct_change": null,
+  "nand_pct_change": null,
+  "title": "[News] NAND Spot Prices Reverse Course, Sliding 20% in 2 Weeks amid Weak Consumer Demand, YMTC Competition",
+  "err": null,
+  "ddr4_ctx": "",
+  "nand_ctx": ""
+ },
+ {
+  "url": "https://www.trendforce.com/news/2026/11/18/insights-memory-spot-price-update-nand-spot-contract-price-gap-exceeds-20-amid-weak-demand/",
+  "article_date": "2026-11-18",
+  "ddr4_date": "2026-11-17",
+  "nand_date": "2026-11-09",
+  "obs_date": "2026-11-17",
+  "ddr4_mainstream_usd": 44.25,
+  "nand512_tlc_usd": 14.238,
+  "ddr4_pct_change": 1.43,
+  "nand_pct_change": 0.2,
+  "title": "[Insights] Memory Spot Price Update: NAND Spot-Contract Price Gap Exceeds 20% amid Weak Demand",
+  "err": null,
+  "ddr4_ctx": "mainstream chips (i.e., DDR4 1Gx8 3200MT/s) slightly decreased by 1.43% from US$44.89 last week to US$44.25 this week (November 17).",
+  "nand_ctx": "512Gb TLC wafers dropped by 0.20% this week (November 9), with average quotations coming to US$14.238."
  }
 ]
