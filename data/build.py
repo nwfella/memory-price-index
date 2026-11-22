@@ -13,10 +13,22 @@ kits = ds["series"]["ddr5_retail"]["kits"][-1][1]
 posts = len(ds["source_posts"])
 
 payload = json.dumps(ds, separators=(",", ":"), ensure_ascii=True).replace("</", "<\\/")
+
+# board timestamps: the vendor's own "Last Update" for each live board
+board_asof = "not read on this build"
+try:
+    bord = json.load(open(os.path.join(HERE, "spot_board.json"), encoding="utf-8"))
+    parts = [(b.get("as_of") or "").strip() for b in bord.get("boards", []) if b.get("as_of")]
+    if parts:
+        board_asof = " ; ".join(sorted(set(parts), reverse=True)[:2]) + " (GMT+8)"
+except Exception:
+    pass
+
 html = tpl.replace("/*__DATA__*/{}", payload)
 html = (html.replace("{{RAM_DAYS}}", str(ram_days))
             .replace("{{RAM_KITS}}", str(kits))
             .replace("{{SPOT_POSTS}}", str(posts))
+            .replace("{{BOARD_ASOF}}", board_asof)
             .replace("{{BUILT}}", ds["generated_at"][:10]))
 
 assert "{{" not in html, "unreplaced placeholder: " + str(re.findall(r"\{\{[A-Z_]+\}\}", html))

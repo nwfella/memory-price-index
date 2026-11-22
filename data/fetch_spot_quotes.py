@@ -10,7 +10,7 @@ Parsing rules learned from the actual article text:
   "Spot prices of 512Gb TLC wafers dropped by 9.19% this week (October 26),
    with average quotations arriving at US$16.883."
 """
-import re, json, csv, urllib.request, os
+import re, json, csv, ssl, time, urllib.request, os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -19,12 +19,33 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 MONTHS = {m: i for i, m in enumerate(
     ["January", "February", "March", "April", "May", "June", "July",
      "August", "September", "October", "November", "December"], 1)}
+# a healthy re-parse yields ~40 priced weekly quotes; below this the upstream
+# answer is degraded and the existing history must survive untouched
+MIN_PRICED = 20
 
 
-def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=35) as r:
-        return r.read().decode("utf-8", "replace")
+def _ctx():
+    """Some conda installs export a stale SSL_CERT_FILE that fails DigiCert chains
+    with 'self-signed certificate in certificate chain'. Prefer certifi when present."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+def get(url, tries=2):
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=35, context=_ctx()) as r:
+                return r.read().decode("utf-8", "replace")
+        except Exception as e:
+            last = e
+            time.sleep(1 + 2 * i)
+    raise last
+
 
 
 def clean(html):
@@ -145,6 +166,15 @@ if __name__ == "__main__":
         rows = list(ex.map(parse, norm))
     rows = [r for r in rows if not r["err"] or r["ddr4_mainstream_usd"] or r["nand512_tlc_usd"]]
     rows.sort(key=lambda r: r["obs_date"] or "")
+    priced = sum(1 for r in rows if r["ddr4_mainstream_usd"] or r["nand512_tlc_usd"])
+    if priced < MIN_PRICED:
+        # Upstream refused us (TLS/DNS/throttle): leave the last good history in place
+        # instead of rewriting the CSV with an empty table. The chart keeps its points
+        # and the retail series can still publish downstream.
+        print(f"DEGRADED: only {priced} priced posts (need {MIN_PRICED}) — "
+              f"spot_series.csv left untouched")
+        print(f"{priced} DDR4 points, {priced} priced rows overall")
+        raise SystemExit(0)
     with open("spot_series.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["obs_date", "ddr4_date", "nand_date", "article_date", "ddr4_mainstream_usd",
                                           "ddr4_pct_change", "nand512_tlc_usd",

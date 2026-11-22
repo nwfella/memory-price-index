@@ -158,7 +158,7 @@
 <div class="wrap">
   <header class="hero">
     <p class="kicker">DDR5 · DDR4 · DRAM spot · NAND wafer · client SSD</p>
-    <h1 id="verdict">NAND has turned. <em>DRAM has not.</em></h1>
+    <h1 id="verdict">Both have turned. <b>Retail is last.</b></h1>
     <p class="lede" id="lede"></p>
 
     <div class="tiles" id="tiles"></div>
@@ -209,11 +209,11 @@
     </div>
     <div class="vgrid">
       <div class="vcard turned">
-        <h3><span style="color:var(--down)">▼</span> NAND flash — turned</h3>
+        <h3><span style="color:var(--down)">▼</span> NAND flash — broken</h3>
         <p id="vNand"></p>
       </div>
       <div class="vcard stuck">
-        <h3><span style="color:var(--up)">▲</span> DRAM — still climbing</h3>
+        <h3><span style="color:var(--down)">▼</span> DRAM spot — rolled over</h3>
         <p id="vDram"></p>
       </div>
       <div class="vcard mixed">
@@ -236,7 +236,25 @@
     <div class="legend-note">
       <span>3Q25 256GB ≈ $33.30 → 3Q26: $128.38 (TrendForce value-grade table) / $134.20 (press, DRAMeXchange) ·
         <strong style="color:var(--up)">+285% to +303% YoY</strong> depending on grade</span>
-      <span>4Q26 outlook: NAND contract +15–20% QoQ, client SSD “limited increase” (TrendForce, 30 Sep 2026)</span>
+      <span>4Q26 guidance, revised 11 Nov 2026: client SSD <strong style="color:var(--up)">under +5% QoQ</strong> —
+        a hard deceleration from the 3Q26 print above</span>
+    </div>
+  </section>
+
+  <!-- ================= guidance ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>What the contract layer is now guided to do</h2>
+        <p>Spot and retail are the fast, noisy layer. This is what TrendForce tells the people signing quarterly
+           agreements, each line dated to the print it came from — including the ones that were superseded.</p>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="guideTbl">
+        <thead><tr><th>Dated</th><th>Line item</th><th style="text-align:left">Guidance</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </section>
 
@@ -245,7 +263,8 @@
     <div class="panel-head">
       <div>
         <h2>Spot board</h2>
-        <p>The latest dated quote for each benchmark part. Session change is the vendor's own day-on-day move.</p>
+        <p>The latest dated quote for each benchmark part, read from the vendor's live board at build time.
+           Session change is the vendor's own day-on-day move; the date is the board's own “Last Update”.</p>
       </div>
     </div>
     <div class="tablewrap">
@@ -286,12 +305,19 @@
           Full daily series, {{RAM_DAYS}} days, {{RAM_KITS}} tracked DDR5 kits on the last day.</li>
       <li><a href="https://www.trendforce.com/price/dram/dram_spot" target="_blank" rel="noopener">TrendForce DRAM spot</a>
           and <a href="https://www.trendforce.com/price/flash/wafer_spot" target="_blank" rel="noopener">NAND wafer spot</a>
-          price boards — current session quotes.</li>
+          price boards — re-read on every build, so the board rows carry the vendor's own
+          “Last Update” timestamp ({{BOARD_ASOF}}) rather than a hand-copied date.</li>
       <li><a href="https://www.trendforce.com/news/" target="_blank" rel="noopener">TrendForce “Memory Spot Price Update”</a>
           — the weekly posts those boards summarise; each charted spot point is one of these quotes
           ({{SPOT_POSTS}} posts parsed, links in the hover tooltip).</li>
       <li><a href="https://www.trendforce.com/price/flash/pcc_oem_ssd_contract" target="_blank" rel="noopener">TrendForce PC-Client OEM SSD contract price</a>, 3Q26.</li>
-      <li><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html" target="_blank" rel="noopener">TrendForce 4Q26 memory outlook</a> (30 Sep 2026) — conventional DRAM +10–15% QoQ, NAND +15–20%.</li>
+      <li><a href="https://www.trendforce.com/presscenter/news/20261111-13303.html" target="_blank" rel="noopener">TrendForce PC OEM procurement note</a>
+          (11 Nov 2026) — PC DRAM contract +13–18% QoQ in 4Q26, client SSD under +5% QoQ, notebook shipments −15.8% QoQ.</li>
+      <li><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html" target="_blank" rel="noopener">TrendForce NAND 2027 outlook</a>
+          (19 Nov 2026) — 4Q26 NAND contract cut to +8–13% QoQ, 1Q27 at −0–5% QoQ, all categories falling from 2Q27.</li>
+      <li><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html" target="_blank" rel="noopener">TrendForce 4Q26 memory outlook</a>
+          (30 Sep 2026) — the earlier print: conventional DRAM +10–15% QoQ, NAND +15–20%. Kept because it is the
+          number the later revisions are measured against.</li>
     </ol>
     <h4>Method &amp; limits</h4>
     <p class="disclaimer">
@@ -348,15 +374,38 @@ for (const k of ORDER) {
 $("#stamp").textContent = "data through " + fmtDay(toT(DATA.as_of)) + " · built " + DATA.generated_at.slice(0, 10);
 const s5 = DATA.series.ddr5_retail.st, sn = DATA.series.nand_spot.st, sd = DATA.series.dram_spot.st;
 
+/* ---------------- verdict + lede ---------------- */
+/* Everything below is computed from DATA, so the prose cannot outlive the numbers.
+   The previous hand-written lede still called DDR4 spot a "record" three weeks
+   after it had rolled over. */
+const s4 = DATA.series.ddr4_retail.st;
+const LEGS = [[s5, "DDR5 kits"], [s4, "DDR4 kits"], [sd, "DDR4 chip"], [sn, "NAND wafer"]];
+const offTxt = (st, poss = "its") => st.off_peak_pct > -0.05
+  ? "at a record"
+  : pct(st.off_peak_pct) + " off " + poss + " " + fmtDay(toT(st.peak_date)) + " high";
+const chg30 = st => st.chg_30d == null ? "no 30-day read" : pct(st.chg_30d) + " in 30 days";
+
+(function verdict() {
+  const el = $("#verdict");
+  const turned = LEGS.filter(([st]) => st.off_peak_pct < -2).length;
+  const deep = LEGS.filter(([st]) => st.off_peak_pct < -10).length;
+  if (deep >= 1 && turned === 4) el.innerHTML = "All four have turned. <b>Retail is last.</b>";
+  else if (deep >= 1 && turned >= 2) el.innerHTML = "Both have turned. <b>Retail is last.</b>";
+  else if (deep >= 1) el.innerHTML = "NAND has turned. <b>DRAM has not.</b>";
+  else el.innerHTML = "Spot is rolling over. <b>Retail has not noticed yet.</b>";
+})();
+
 $("#lede").innerHTML =
-  "NAND flash broke a 21-month climb in October: 512Gb TLC wafers peaked at <strong>$" + fmt(sn.peak, 2) +
-  "</strong> on " + fmtDay(toT(sn.peak_date)) + " and now quote <strong>$" + fmt(sn.last, 2) +
-  "</strong>, <strong class='down'>" + pct(sn.off_peak_pct) + "</strong> off that high and falling " +
-  pct(sn.chg_30d) + " in the last month. DRAM has not followed: the DDR4 benchmark chip is at a record <strong>$" +
-  fmt(sd.last, 2) + "</strong>, DDR5 kits still average <strong>$" + fmt(s5.last, 2) + "/GB</strong> (" +
-  pct(s5.since_first_pct) + " since this series began), and TrendForce still guides DRAM contract prices " +
-  "+10–15% for 4Q26. Retail is showing the first cracks — DDR5 is " + pct(s5.off_peak_pct) + " from its 23 Oct record — " +
-  "but a crack is not a trend.";
+  "NAND broke the supercycle: 512Gb TLC wafers peaked at <strong>$" + fmt(sn.peak, 2) + "</strong> on " +
+  fmtDay(toT(sn.peak_date)) + " and quote <strong>$" + fmt(sn.last, 2) + "</strong> now — <strong class='down'>" +
+  pct(sn.off_peak_pct) + "</strong> off that high and " + chg30(sn) + ". " +
+  "DRAM has followed at the spot layer: the DDR4 8Gb benchmark is <strong>$" + fmt(sd.last, 2) + "</strong>, " +
+  offTxt(sd) + ". " +
+  "Retail is only cracking — DDR5 kits average <strong>$" + fmt(s5.last, 2) + "/GB</strong> (" + offTxt(s5, "their") +
+  ") and DDR4 kits <strong>$" + fmt(s4.last, 2) + "/GB</strong> (" + offTxt(s4, "their") + "). " +
+  "Contract prices are still rising, just slower: PC DRAM <strong>+13–18% QoQ</strong> for 4Q26, while NAND guidance " +
+  "was cut to <strong>+8–13%</strong> on 19 Nov and points <strong>negative from 1Q27</strong>.";
+
 
 /* ---------------- tiles ---------------- */
 const TILES = [
@@ -645,20 +694,23 @@ function drawDD() {
 /* ---------------- verdict cards ---------------- */
 $("#vNand").innerHTML =
   "512Gb TLC peaked at <b>$" + fmt(sn.peak, 2) + "</b> (" + fmtDay(toT(sn.peak_date)) + "), sat between $19–21 for five " +
-  "months, then broke: <b>" + pct(sn.chg_30d) + " in 30 days</b> and −9.19% in the single week to 26 Oct. Wafer contract " +
-  "prices stopped rising in October for the first time in 21 months. This is the one leg of the market that has clearly turned.";
+  "months, then broke. It is now <b>" + pct(sn.off_peak_pct) + "</b> off that high, " + chg30(sn) + ". This is the leg " +
+  "where spot and contract now agree: TrendForce cut 4Q26 NAND contract growth to +8–13% on 19 Nov and guides " +
+  "<b>0 to −5% in 1Q27</b>, with every category falling from 2Q27.";
 
 $("#vDram").innerHTML =
-  "DDR4 8Gb spot is at a record <b>$" + fmt(sd.last, 2) + "</b> (" + fmtDay(toT(sd.last_date)) + "), +" +
-  fmt(sd.since_first_pct, 0) + "% in twelve months, with no drawdown at all. DDR5 and DDR4 retail kits are +" +
-  pct(s5.chg_90d) + " and +" + pct(DATA.series.ddr4_retail.st.chg_90d) + " over 90 days. TrendForce still guides " +
-  "conventional DRAM contract +10–15% QoQ for 4Q26 — HBM and server allocation keep crowding out consumer wafers.";
+  "The DDR4 8Gb benchmark peaked at <b>$" + fmt(sd.peak, 2) + "</b> on " + fmtDay(toT(sd.peak_date)) + " and sits at <b>$" +
+  fmt(sd.last, 2) + "</b> — " + offTxt(sd) + ", " + chg30(sd) + ". The roll-over is three weeks old and the daily board " +
+  "keeps printing small declines. Contract has not followed yet: PC DRAM is still guided <b>+13–18% QoQ</b> for 4Q26, " +
+  "and suppliers plan to cut PC DRAM allocation in 2027 rather than cut price.";
 
 $("#vRetail").innerHTML =
-  "Client SSD contract prices are still rising (+20% QoQ in 3Q26) but decelerating, and NAND contract guidance for 4Q26 " +
-  "is +15–20%. Retail kits are the first place a top shows: DDR5 is <b>" + pct(s5.off_peak_pct) + "</b> off its 23 Oct " +
-  "record and DDR4 <b>" + pct(DATA.series.ddr4_retail.st.off_peak_pct) + "</b> off its April high. Two weeks of softening " +
-  "is noise; a lower low in the next 60 days is a trend.";
+  "Retail is the slow layer and it is still near its highs: DDR5 kits are <b>" + pct(s5.off_peak_pct) + "</b> off their " +
+  fmtDay(toT(s5.peak_date)) + " record (" + chg30(s5) + ") and DDR4 kits <b>" + pct(s4.off_peak_pct) + "</b> off their " +
+  fmtDay(toT(s4.peak_date)) + " peak (" + chg30(s4) + "). Client SSD contract " +
+  "growth has decelerated to <b>under +5% QoQ</b> for 4Q26 — the first quarter in a year where a drive buyer gets " +
+  "anything close to a flat price.";
+
 
 /* ---------------- SSD ladder ---------------- */
 const q26 = DATA.ssd_contract.quarters[1], q25 = DATA.ssd_contract.quarters[0];
@@ -685,6 +737,13 @@ $("#ladder").innerHTML = ladder.map(d => {
     '<div class="q2"><span style="font-size:15px"><b>$' + fmt(d.v, 2) + '</b></span>' +
     '<span style="color:var(--dim)">per drive, contract</span></div></div>';
 }).join("");
+
+/* ---------------- guidance table ---------------- */
+$("#guideTbl").querySelector("tbody").innerHTML = (DATA.guidance || []).map(g =>
+  "<tr><td class='num'>" + g.date + "</td><td style='text-align:left'>" + g.tag + "</td>" +
+  "<td style='text-align:left;white-space:normal;color:var(--muted);font-size:12px;line-height:1.55;min-width:420px'>" +
+  g.note + " <a href='" + g.url + "' target='_blank' rel='noopener' style='color:var(--dim)'>source</a></td></tr>"
+).join("");
 
 /* ---------------- spot table ---------------- */
 $("#spotTbl").querySelector("tbody").innerHTML = DATA.snapshot.map(r => {

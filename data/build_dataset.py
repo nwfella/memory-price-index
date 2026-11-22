@@ -109,24 +109,88 @@ ds = {
             {"q": "3Q26", "gb256": 128.38, "gb512": 201.13, "gb1t": 321.00,
              "source": "TrendForce PC-Client OEM SSD Contract Price, 3Q26 (published 2026-08-05)"},
         ],
-        "outlook": {"q": "4Q26", "note": "Client SSD: limited increase; enterprise SSD +23-28%; NAND contract +15-20% QoQ (TrendForce, 2026-09-30)", "yoy_256gb": 303},
     },
-    # ---------- 5. dated snapshot ----------
-    "snapshot": [
-        {"name": "DDR5 16Gb chip", "value": 61.50, "unit": "$", "as_of": "2026-10-30", "chg": 0.27,
-         "src": "TrendForce DRAM spot (session average, +0.27% session change)"},
-        {"name": "DDR4 16Gb chip", "value": 82.796, "unit": "$", "as_of": "2026-10-30", "chg": -0.15,
-         "src": "TrendForce DRAM spot"},
-        {"name": "512Gb TLC wafer", "value": 18.592, "unit": "$", "as_of": "2026-10-19", "chg": -1.28,
-         "src": "TrendForce wafer spot"},
-        {"name": "128Gb MLC contract", "value": 30.608, "unit": "$", "as_of": "2H Sep 2026", "chg": 0.44,
-         "src": "TrendForce NAND contract"},
-        {"name": "Client SSD 1TB contract", "value": 321.00, "unit": "$", "as_of": "3Q26", "chg": None,
-         "src": "TrendForce PC-client OEM SSD contract, value grade"},
-        {"name": "DDR5 32GB kit floor", "value": 446.41, "unit": "$", "as_of": "2026-10-31", "chg": None,
-         "src": "RamRadar lowest tracked DDR5-6000 2x16GB kit"},
+    # ---------- 5. forward guidance, dated and attributed ----------
+    # Each line is a print we can link to. Superseded prints stay listed with their
+    # date so the page shows a direction of travel, not a single frozen number.
+    "guidance": [
+        {"date": "2026-11-19", "tag": "NAND contract",
+         "note": "4Q26 increase cut to <b>+8–13% QoQ</b> (from +15–20% on 30 Sep). 1Q27 <b>−0–5% QoQ</b>, with every product category in a down-cycle from 2Q27; 2027 bit supply +25–30% YoY.",
+         "url": "https://www.trendforce.com/presscenter/news/20261119-13314.html"},
+        {"date": "2026-11-11", "tag": "PC DRAM contract",
+         "note": "<b>+13–18% QoQ</b> in 4Q26 — still rising, but slower than 3Q26. Suppliers tentatively plan to cut PC DRAM supply in 2027.",
+         "url": "https://www.trendforce.com/presscenter/news/20261111-13303.html"},
+        {"date": "2026-11-11", "tag": "Client SSD contract",
+         "note": "<b>Under +5% QoQ</b> in 4Q26 — a hard deceleration from the +285–303% YoY of 3Q26. OEMs are buying only what production needs.",
+         "url": "https://www.trendforce.com/presscenter/news/20261111-13303.html"},
+        {"date": "2026-11-11", "tag": "Demand",
+         "note": "Notebook shipments <b>−15.8% QoQ in 3Q26</b>, with a further decline guided for 4Q26; finished-goods inventory is building and 1Q27 procurement plans are being revised down.",
+         "url": "https://www.trendforce.com/presscenter/news/20261111-13303.html"},
+        {"date": "2026-09-30", "tag": "Conventional DRAM contract",
+         "note": "+10–15% QoQ for 4Q26 (superseded for PC DRAM by the 11 Nov print).",
+         "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"},
     ],
 }
+
+
+# ---------- 6. dated snapshot: live spot boards + contract prints ----------
+# The boards expose only the current session, so they are re-read on every build
+# (data/fetch_spot_board.py). Curated to benchmark parts; every row carries the
+# board's own update timestamp, so a stale board shows its age instead of lying.
+BOARD_PICKS = [
+    ("dram_spot", "DDR5 16Gb (2Gx8) 4800/5600", "DDR5 16Gb chip"),
+    ("dram_spot", "DDR5 16Gb (2Gx8) eTT", "DDR5 16Gb eTT"),
+    ("dram_spot", "DDR4 16Gb (2Gx8) 3200", "DDR4 16Gb chip"),
+    ("dram_spot", "DDR4 8Gb (1Gx8) 3200", "DDR4 8Gb chip"),
+    ("dram_spot", "DDR4 8Gb (1Gx8) eTT", "DDR4 8Gb eTT"),
+    ("nand_wafer", "512Gb TLC", "512Gb TLC wafer"),
+    ("nand_wafer", "256Gb TLC", "256Gb TLC wafer"),
+    ("nand_wafer", "128Gb TLC", "128Gb TLC wafer"),
+    ("nand_wafer", "MLC 64Gb 8GBx8", "MLC 64Gb wafer"),
+]
+
+
+def snapshot():
+    rows = []
+    try:
+        board = json.load(open(os.path.join(HERE, "spot_board.json"), encoding="utf-8"))
+    except Exception:
+        board = {"boards": []}
+    by_id = {b["id"]: b for b in board.get("boards", [])}
+    for bid, part, label in BOARD_PICKS:
+        b = by_id.get(bid)
+        if not b:
+            continue
+        row = next((r for r in b["rows"] if r["name"] == part), None)
+        if not row:
+            continue
+        rows.append({"name": label, "value": row["value"], "unit": "$",
+                     "as_of": (b.get("as_of") or "")[:16] or "n/a",
+                     "chg": row.get("chg"),
+                     "src": "%s board — session average%s" % (
+                         "DRAM spot" if bid == "dram_spot" else "NAND wafer spot",
+                         "" if not b.get("stale") else " (board did not refresh; last good read)")})
+    # contract prints: no live session, so they carry their own period
+    rows += [
+        {"name": "128Gb MLC contract", "value": 30.608, "unit": "$", "as_of": "2H Sep 2026",
+         "chg": 0.44, "src": "TrendForce NAND contract"},
+        {"name": "Client SSD 1TB contract", "value": 321.00, "unit": "$", "as_of": "3Q26",
+         "chg": None, "src": "TrendForce PC-client OEM SSD contract, value grade"},
+    ]
+    # kit floor: lowest tracked DDR5 kit, converted to a 32GB (2x16) drive-out
+    try:
+        last = days[-1]
+        floor = float([r for r in ram if r["date"] == last and r["ram_type"] == "DDR5"
+                       and r["form_factor"] == "DIMM"][0]["min_price_per_gb"])
+        rows.append({"name": "DDR5 32GB kit floor", "value": round(floor * 32, 2), "unit": "$",
+                     "as_of": last, "chg": None,
+                     "src": "RamRadar cheapest tracked DDR5 DESKTOP kit × 32GB"})
+    except Exception:
+        pass
+    return rows
+
+
+ds["snapshot"] = snapshot()
 
 
 def stats(pts):
@@ -156,9 +220,20 @@ def stats(pts):
 
 ds["stats"] = {k: stats(v["pts"]) for k, v in ds["series"].items()}
 
+# A series that lost its history is a data problem, not a reason to ship a blank
+# page: say which one is short and keep going (the map-style KeyError that froze
+# this site for four days in Nov 2026 came from exactly this line).
+short = [k for k, s in ds["stats"].items() if len(s) < 3]
+if short:
+    print("WARN: series with no usable history:", ", ".join(short))
+
 out = os.path.join(HERE, "dataset.json")
 json.dump(ds, open(out, "w", encoding="utf-8"), separators=(",", ":"))
 print("wrote", out, os.path.getsize(out), "bytes")
 for k, s in ds["stats"].items():
-    print(f"{k:12s} last {s['last']:>8} off_peak {s['off_peak_pct']:>7}%  30d {s['chg_30d']}%  "
-          f"90d {s['chg_90d']}%  peak {s['peak']} on {s['peak_date']}")
+    if not s:
+        print(f"{k:12s} EMPTY — no priced observations")
+        continue
+    print(f"{k:12s} last {s['last']:>8} off_peak {s['off_peak_pct']:>7}%  "
+          f"30d {s['chg_30d']}%  90d {s['chg_90d']}%  peak {s['peak']} on {s['peak_date']}")
+

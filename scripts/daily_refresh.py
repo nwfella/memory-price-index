@@ -32,9 +32,10 @@ PY = sys.executable
 BRANCH = "main"
 LIVE = "https://nwfella.github.io/memory-price-index/"
 GENERATED = ["index.html", "data/dataset.json"]
-RAW = ["data/ramradar.csv", "data/spot_series.csv", "data/spot_posts.json", "data/spot_urls.txt"]
+RAW = ["data/ramradar.csv", "data/spot_series.csv", "data/spot_posts.json", "data/spot_urls.txt",
+       "data/spot_board.json"]
 SOURCES = ["template.html", "data/build.py", "data/build_dataset.py",
-           "data/fetch_spot_quotes.py", "data/refresh.py", "scripts"]
+           "data/fetch_spot_quotes.py", "data/fetch_spot_board.py", "data/refresh.py", "scripts"]
 MIN_SPOT_ROWS = 30          # a healthy re-parse yields 37 priced weekly quotes
 TRANSIENT = re.compile(
     r"could not resolve host|connection (?:timed out|reset|refused)|failed to connect"
@@ -177,10 +178,22 @@ os.remove(backup)
 index_path = os.path.join(REPO, "index.html")
 html = open(index_path, encoding="utf-8").read()
 missing = [m for m in ("<title>Memwatch", "const DATA =", '"ddr5_retail"', '"nand_spot"',
-                       "listing-mix") if m not in html]
+                       "listing-mix", '"guidance"', '"snapshot"') if m not in html]
 if len(html) < 60000 or missing:
     die("memwatch: GATE FAILED (%d bytes, missing %s) — not deploying.\n%s"
         % (len(html), missing or "-", tail(out)))
+
+ds = json.load(open(os.path.join(DATA, "dataset.json"), encoding="utf-8"))
+st = ds["stats"]
+# Every series must have a usable history: an empty one is the exact failure that
+# froze this site for four days in Nov 2026 — it surfaced as a KeyError inside the
+# report line, which reads like a build crash and blocks the whole deploy.
+dead = [k for k in ("ddr5_retail", "ddr4_retail", "dram_spot", "nand_spot")
+        if not st.get(k) or "last" not in st[k]]
+if dead:
+    die("memwatch: DATASET INCOMPLETE — no priced points for %s — not deploying." % ", ".join(dead))
+s5, sd, sn = st["ddr5_retail"], st["dram_spot"], st["nand_spot"]
+as_of = ds["as_of"]
 
 # interactive-chart gate: hovering must repaint the frame, not stack crosshairs
 rc, hv, hverr = run([PY, os.path.join(REPO, "scripts", "verify_hover.py")], timeout=300)
@@ -189,11 +202,6 @@ if rc != 0:
 # say so when the gate could not run, so a skipped check is never mistaken for a passed one
 hover_note = (" hover-gate skipped (no headless browser in this context)" if "[skip]" in hv
               else " hover-gate ok")
-
-ds = json.load(open(os.path.join(DATA, "dataset.json"), encoding="utf-8"))
-st = ds["stats"]
-s5, sd, sn = st["ddr5_retail"], st["dram_spot"], st["nand_spot"]
-as_of = ds["as_of"]
 
 # ---------------------------------------------------------------- 4. material change?
 unchanged = (not FORCE) and head_signature() == signature(ds)
