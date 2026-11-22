@@ -1,0 +1,133 @@
+{
+ "fetched_at": "2026-11-22T23:56:42Z",
+ "boards": [
+  {
+   "id": "dram_spot",
+   "label": "DRAM spot",
+   "unit": "$/chip",
+   "source_url": "https://www.trendforce.com/price/dram/dram_spot",
+   "as_of": "2026-11-20 18:10 (GMT+8)",
+   "rows": [
+    {
+     "name": "DDR5 16Gb (2Gx8) 4800/5600",
+     "value": 60.667,
+     "chg": 0.0
+    },
+    {
+     "name": "DDR5 16Gb (2Gx8) eTT",
+     "value": 31.0,
+     "chg": 0.26
+    },
+    {
+     "name": "DDR4 16Gb (2Gx8) 3200",
+     "value": 78.625,
+     "chg": -0.16
+    },
+    {
+     "name": "DDR4 16Gb (2Gx8) eTT",
+     "value": 12.575,
+     "chg": -0.79
+    },
+    {
+     "name": "DDR4 8Gb (1Gx8) 3200",
+     "value": 43.75,
+     "chg": -0.39
+    },
+    {
+     "name": "DDR4 8Gb (1Gx8) eTT",
+     "value": 5.47,
+     "chg": -0.4
+    },
+    {
+     "name": "DDR3 4Gb 512Mx8 1600/1866",
+     "value": 13.771,
+     "chg": -0.25
+    },
+    {
+     "name": "DDR5 UDIMM 16GB 4800/5600",
+     "value": 245.0,
+     "chg": 0.69
+    },
+    {
+     "name": "DDR4 UDIMM 16GB 3200",
+     "value": 164.158,
+     "chg": -0.03
+    },
+    {
+     "name": "GDDR5 8Gb",
+     "value": 12.336,
+     "chg": 0.0
+    },
+    {
+     "name": "GDDR6 8Gb",
+     "value": 12.538,
+     "chg": 0.18
+    }
+   ]
+  },
+  {
+   "id": "nand_wafer",
+   "label": "NAND wafer spot",
+   "unit": "$/wafer",
+   "source_url": "https://www.trendforce.com/price/flash/wafer_spot",
+   "as_of": "2026-11-09 14:40 (GMT+8)",
+   "rows": [
+    {
+     "name": "SLC 2Gb 256MBx8",
+     "value": 4.5,
+     "chg": 1.01
+    },
+    {
+     "name": "SLC 1Gb 128MBx8",
+     "value": 3.325,
+     "chg": 1.13
+    },
+    {
+     "name": "MLC 64Gb 8GBx8",
+     "value": 44.174,
+     "chg": 0.42
+    },
+    {
+     "name": "MLC 32Gb 4GBx8",
+     "value": 20.583,
+     "chg": 0.24
+    },
+    {
+     "name": "512Gb TLC",
+     "value": 14.267,
+     "chg": -11.67
+    },
+    {
+     "name": "256Gb TLC",
+     "value": 18.142,
+     "chg": -1.21
+    },
+    {
+     "name": "128Gb TLC",
+     "value": 9.967,
+     "chg": 0.0
+    },
+    {
+     "name": "MicroSD 16GB",
+     "value": 2.525,
+     "chg": -2.89
+    },
+    {
+     "name": "MicroSD 32GB",
+     "value": 3.5,
+     "chg": -2.78
+    },
+    {
+     "name": "MicroSD 64GB",
+     "value": 5.2,
+     "chg": -5.88
+    },
+    {
+     "name": "MicroSD 128GB",
+     "value": 10.25,
+     "chg": -5.96
+    }
+   ]
+  }
+ ]
+}
