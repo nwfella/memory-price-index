@@ -20,7 +20,7 @@ try:
     bord = json.load(open(os.path.join(HERE, "spot_board.json"), encoding="utf-8"))
     parts = [(b.get("as_of") or "").strip() for b in bord.get("boards", []) if b.get("as_of")]
     if parts:
-        board_asof = " ; ".join(sorted(set(parts), reverse=True)[:2]) + " (GMT+8)"
+        board_asof = " ; ".join(sorted(set(parts), reverse=True)[:2])   # already carries "(GMT+8)"
 except Exception:
     pass
 

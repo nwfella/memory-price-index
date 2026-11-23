@@ -105,6 +105,31 @@ def head_signature():
         return None
 
 
+def head_html_hash():
+    """(head blob, worktree blob) for index.html — equal pair means the artifact is
+    byte-identical to what is committed."""
+    rc, head_blob, _ = git("rev-parse", "HEAD:index.html")
+    if rc != 0 or not head_blob.strip():
+        return None, None
+    rc, work_blob, _ = git("hash-object", "index.html")
+    if rc != 0 or not work_blob.strip():
+        return None, None
+    return head_blob.strip(), work_blob.strip()
+
+
+def html_changed():
+    """A template/build fix changes index.html without touching the data. Comparing
+    only the data signature would call that run 'unchanged' and never publish it —
+    the fix would sit on disk forever while the site served the old markup.
+
+    Compares git blob hashes, not decoded text: filters and CRLF make a text
+    round-trip lie about whether the deployed bytes actually changed."""
+    a, b = head_html_hash()
+    if a is None:
+        return True                      # nothing committed yet: treat as changed
+    return a != b
+
+
 def live_matches(local_bytes, budget=150):
     """Poll Pages until it serves exactly what we pushed."""
     want = hashlib.sha256(local_bytes).hexdigest()
@@ -204,7 +229,7 @@ hover_note = (" hover-gate skipped (no headless browser in this context)" if "[s
               else " hover-gate ok")
 
 # ---------------------------------------------------------------- 4. material change?
-unchanged = (not FORCE) and head_signature() == signature(ds)
+unchanged = (not FORCE) and head_signature() == signature(ds) and not html_changed()
 if unchanged:
     git("restore", "--worktree", "--", *(GENERATED + RAW))
     queued = ahead_count()
