@@ -85,7 +85,7 @@
   #guideTbl{table-layout:fixed}
   #guideTbl th:nth-child(1),#guideTbl td:nth-child(1){width:104px}
   #guideTbl th:nth-child(2),#guideTbl td:nth-child(2){width:168px;text-align:left;white-space:normal}
-  #guideTbl td:nth-child(3){white-space:normal;line-height:1.55;color:var(--muted);font-size:12px}
+  #guideTbl td:nth-child(3){white-space:normal;line-height:1.55;color:var(--muted);font-size:12px;text-align:left}
   .chips{display:flex;gap:7px;flex-wrap:wrap}
   .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel2);
         border-radius:999px;padding:5px 12px 5px 9px;cursor:pointer;font:600 12px system-ui;color:var(--muted);user-select:none}
@@ -746,9 +746,8 @@ $("#ladder").innerHTML = ladder.map(d => {
 
 /* ---------------- guidance table ---------------- */
 $("#guideTbl").querySelector("tbody").innerHTML = (DATA.guidance || []).map(g =>
-  "<tr><td class='num'>" + g.date + "</td><td style='text-align:left'>" + g.tag + "</td>" +
-  "<td style='text-align:left;white-space:normal;color:var(--muted);font-size:12px;line-height:1.55;min-width:420px'>" +
-  g.note + " <a href='" + g.url + "' target='_blank' rel='noopener' style='color:var(--dim)'>source</a></td></tr>"
+  "<tr><td class='num'>" + g.date + "</td><td>" + g.tag + "</td>" +
+  "<td>" + g.note + " <a href='" + g.url + "' target='_blank' rel='noopener' style='color:var(--dim)'>source</a></td></tr>"
 ).join("");
 
 /* ---------------- spot table ---------------- */
