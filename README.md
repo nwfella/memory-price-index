@@ -49,6 +49,10 @@ set DDR5 and client-SSD prices — which is why contract prices rise while spot 
 - **The prose is computed, not written.** The verdict, lede and verdict cards are derived from the stats at
   render time, so a headline cannot outlive the data it describes (the previous hand-written lede still called
   DDR4 spot a "record" three weeks after it had rolled over).
+- **Retail history is a union, not whatever upstream serves today.** RamRadar's export is a *rolling
+  window* — around 170 days — and on 18 Nov 2026 it silently shrank from 392 days to 172. The refresh now
+  merges each download into the stored CSV (today's rows win on the same key), so the retail series keeps
+  every day it has ever been able to see instead of dropping back to a six-month view.
 - **Nothing is interpolated.** Missing weeks stay missing; lines connect observations that exist.
 - **Discontinuities are annotated, not smoothed.** The vertical marker in May 2026 is a listing-mix change in
   the upstream retail index (the cheapest tracked DDR5 kit jumped $3.17 → $6.77/GB as cheap listings aged
@@ -121,7 +125,9 @@ index.html              the deployed artifact (generated — edit the template)
 ## Limits
 
 Retail figures are **asking prices**, not transactions: RamRadar records the lowest live listing per kit from
-eBay/Newegg (B&H until Sep 2026), so an open-box item can enter the pool and coverage is eBay-weighted. Spot
+eBay/Newegg (B&H until Sep 2026), so an open-box item can enter the pool and coverage is eBay-weighted. The
+upstream index only publishes a rolling ~170-day window, which is why this repo stores the union of every
+download and why the earliest weeks have too few tracked kits to quote (those days are excluded). Spot
 is a thin, broker-driven market for loose chips; contract is what OEMs pay quarterly. Spot moves first and
 overshoots — a falling wafer quote leads SSD pricing by weeks to months, it does not mean a specific drive got
 cheaper today. Not investment advice.

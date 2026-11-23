@@ -69,12 +69,56 @@ def run(script, required=True):
     return True
 
 
+def merge_ramradar(path, body):
+    """Union the fresh download into the stored CSV; the download always wins.
+
+    RamRadar serves a **rolling window** (~170 days), not a full series: on 18 Nov 2026
+    its export silently shrank from 392 days to 172, and a wholesale overwrite threw
+    away seven months of retail history that the chart had already shown. Keep every
+    day we have ever seen, let today's rows overwrite the same keys, and sort for a
+    stable diff.
+    """
+    import csv
+    rows = {}
+    header = None
+    if os.path.exists(path):
+        with open(path, encoding="utf-8", newline="") as f:
+            rdr = csv.DictReader(f)
+            header = rdr.fieldnames
+            for r in rdr:
+                rows[(r["date"], r["ram_type"], r["form_factor"])] = r
+    kept = len(rows)
+
+    text = body.decode("utf-8-sig", "replace")
+    rdr = csv.DictReader(text.splitlines())
+    new_header = rdr.fieldnames or header
+    incoming, incoming_days = 0, set()
+    for r in rdr:
+        if not r.get("date"):
+            continue
+        rows[(r["date"], r["ram_type"], r["form_factor"])] = r
+        incoming += 1
+        incoming_days.add(r["date"])
+    if not incoming:
+        raise SystemExit("RamRadar CSV parsed to zero rows — refusing to touch the stored file")
+
+    header = header or new_header
+    out = sorted(rows.values(), key=lambda r: (r["date"], r["ram_type"], r["form_factor"]))
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=header, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(out)
+    all_days = {r["date"] for r in out}
+    return len(incoming_days), len(all_days - incoming_days), len(all_days)
+
+
 step("1/6  downloading RamRadar daily index")
 body = fetch(RAMRADAR)
 if len(body) < 10000 or b"date,ram_type" not in body[:200]:
     sys.exit("RamRadar CSV looks wrong (%d bytes) — refusing to overwrite" % len(body))
-open(os.path.join(HERE, "ramradar.csv"), "wb").write(body)
-print("   %d bytes, %d rows" % (len(body), body.count(b"\n")))
+kept, carried, days = merge_ramradar(os.path.join(HERE, "ramradar.csv"), body)
+print("   %d rows downloaded (%d days); stored file now %d days — %d carried over from earlier exports"
+      % (len(body.splitlines()) - 1, kept, days, carried))
 
 step("2/6  reading live TrendForce spot boards")
 run("fetch_spot_board.py", required=False)
