@@ -13,6 +13,12 @@ kits = ds["series"]["ddr5_retail"]["kits"][-1][1]
 posts = len(ds["source_posts"])
 
 payload = json.dumps(ds, separators=(",", ":"), ensure_ascii=True).replace("</", "<\\/")
+# The page only ever shows the build DATE (DATA.generated_at.slice(0,10)). Inline the
+# date part alone so the artifact is a pure function of the data: otherwise every run
+# rewrites the minute in the payload, index.html never matches HEAD, and the
+# "nothing changed, publish nothing" path can never trigger.
+payload = payload.replace('"generated_at":"%s"' % ds["generated_at"],
+                          '"generated_at":"%s"' % ds["generated_at"][:10])
 
 # board timestamps: the vendor's own "Last Update" for each live board
 board_asof = "not read on this build"
