@@ -673,5 +673,20 @@
   "err": null,
   "ddr4_ctx": "mainstream chips (i.e., DDR4 1Gx8 3200MT/s) slightly decreased by 1.43% from US$44.89 last week to US$44.25 this week (November 17).",
   "nand_ctx": "512Gb TLC wafers dropped by 0.20% this week (November 9), with average quotations coming to US$14.238."
+ },
+ {
+  "url": "https://www.trendforce.com/news/2026/11/25/insights-memory-spot-price-update-ddr4-ddr3-bear-the-brunt-of-weak-consumer-demand-mainstream-ddr4-down-1-61/",
+  "article_date": "2026-11-25",
+  "ddr4_date": null,
+  "nand_date": null,
+  "obs_date": "2026-11-25",
+  "ddr4_mainstream_usd": 44.03,
+  "nand512_tlc_usd": null,
+  "ddr4_pct_change": 1.61,
+  "nand_pct_change": null,
+  "title": "[Insights] Memory Spot Price Update: DDR4, DDR3 Bear the Brunt of Weak Consumer Demand; Mainstream DDR4 Down 1.61%",
+  "err": null,
+  "ddr4_ctx": "mainstream chips (i.e., DDR4 1Gx8 3200MT/s) slightly decreased by 1.61% from US$44.03 last week (Nov.",
+  "nand_ctx": ""
  }
 ]
