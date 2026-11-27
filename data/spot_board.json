@@ -1,47 +1,47 @@
 {
- "fetched_at": "2026-11-26T15:40:58Z",
+ "fetched_at": "2026-11-27T20:29:19Z",
  "boards": [
   {
    "id": "dram_spot",
    "label": "DRAM spot",
    "unit": "$/chip",
    "source_url": "https://www.trendforce.com/price/dram/dram_spot",
-   "as_of": "2026-11-26 18:10 (GMT+8)",
+   "as_of": "2026-11-27 18:10 (GMT+8)",
    "rows": [
     {
      "name": "DDR5 16Gb (2Gx8) 4800/5600",
-     "value": 60.767,
-     "chg": 0.0
+     "value": 60.333,
+     "chg": -0.71
     },
     {
      "name": "DDR5 16Gb (2Gx8) eTT",
-     "value": 31.0,
-     "chg": 0.0
+     "value": 30.975,
+     "chg": -0.08
     },
     {
      "name": "DDR4 16Gb (2Gx8) 3200",
-     "value": 77.5,
-     "chg": -0.32
+     "value": 76.625,
+     "chg": -1.13
     },
     {
      "name": "DDR4 16Gb (2Gx8) eTT",
-     "value": 12.288,
-     "chg": -0.7
+     "value": 12.2,
+     "chg": -0.72
     },
     {
      "name": "DDR4 8Gb (1Gx8) 3200",
-     "value": 43.125,
-     "chg": -0.21
+     "value": 42.714,
+     "chg": -0.95
     },
     {
      "name": "DDR4 8Gb (1Gx8) eTT",
-     "value": 5.33,
-     "chg": -0.75
+     "value": 5.31,
+     "chg": -0.38
     },
     {
      "name": "DDR3 4Gb 512Mx8 1600/1866",
-     "value": 13.707,
-     "chg": -0.2
+     "value": 13.765,
+     "chg": 0.42
     },
     {
      "name": "DDR5 UDIMM 16GB 4800/5600",
